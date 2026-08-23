@@ -1,0 +1,46 @@
+# fly.toml — barrypre.com
+#
+# Deploy with: fly deploy
+# Secrets (API keys) are never set here; see the README.
+
+app = "barrypre-web"
+primary_region = "ams"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+
+  # Fly terminates TLS at its proxy and forwards plain HTTP, so r.TLS is nil
+  # inside the app and the HSTS header would never be sent. This is the
+  # explicit opt-in that securityHeaders looks for — the code refuses to infer
+  # it from a forwarded header, since any client can set one of those.
+  #
+  # Only correct because force_https below guarantees the browser's leg of the
+  # connection is HTTPS. Do not set this anywhere it is not.
+  FORCE_HSTS = "1"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+
+  # The site is a single stateless binary with no database and no in-memory
+  # state worth preserving, so it is safe to stop when idle and start on the
+  # next request. min_machines_running = 1 keeps one warm regardless, because a
+  # cold start in front of a recruiter opening the CV is the one moment this
+  # site exists for.
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "2s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/healthz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

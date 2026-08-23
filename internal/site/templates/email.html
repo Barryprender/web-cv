@@ -1,0 +1,113 @@
+{{define "email"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>{{.Subject}}</title>
+<style>
+  /* Dark mode is honoured by Apple Mail and iOS and ignored everywhere else,
+     which is why every colour is also set inline below: this block refines
+     the rendering, it never carries it. Values are the site's own dark tokens
+     converted from oklch, which no mail client understands. */
+  @media (prefers-color-scheme: dark) {
+    .bg { background: #030C07 !important; }
+    .surface { background: #0A140F !important; }
+    .ink { color: #E7EDE8 !important; }
+    .ink-dim { color: #B5C2B7 !important; }
+    .ink-faint { color: #718374 !important; }
+    .accent, .accent a { color: #5ED476 !important; }
+    .rule { background: #1B211D !important; }
+    .btn { background: #5ED476 !important; color: #030C07 !important; }
+  }
+</style>
+</head>
+<body class="bg" style="margin:0; padding:0; width:100%; background:#FBF8F4;">
+
+  {{/* Inbox preview text. Hidden in the message itself, but it is what the
+       mail list shows next to the subject, so it carries the opening of the
+       message rather than leaving the client to scrape whatever it finds. */}}
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all;">{{.Preview}}</div>
+
+  {{/* Tables, not divs: Outlook on Windows renders through Word, which has no
+       flexbox and no grid. This is the one layout every client agrees on. */}}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+         class="bg" style="background:#FBF8F4; padding:24px 12px;">
+    <tr>
+      <td align="center">
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               class="surface"
+               style="max-width:560px; background:#FFFFFF; border:1px solid #D4D8DD; border-radius:3px;">
+
+          <!-- header -->
+          <tr>
+            <td style="padding:28px 28px 0 28px;">
+              <p class="ink-faint" style="margin:0 0 10px 0; font-family:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; font-size:12px; letter-spacing:1px; text-transform:uppercase; color:#5D6E80;">~/contact</p>
+
+              <p class="ink" style="margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:21px; font-weight:600; line-height:1.25; color:#142A41;">{{.Name}}</p>
+
+              <p class="accent" style="margin:5px 0 0 0; font-family:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; font-size:13px; color:#1D7D3E;">
+                <a href="mailto:{{.Email}}" class="accent" style="color:#1D7D3E; text-decoration:none;">{{.Email}}</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- rule: a table cell with a background, since a styled <hr> is
+               rendered inconsistently and border-collapse quirks in Outlook
+               make a bordered row unreliable -->
+          <tr>
+            <td style="padding:20px 28px 0 28px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td class="rule" style="height:1px; line-height:1px; font-size:0; background:#D4D8DD;">&nbsp;</td></tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- message -->
+          <tr>
+            <td class="ink" style="padding:20px 28px 0 28px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:15px; line-height:1.6; color:#142A41;">
+              {{/* pre-wrap keeps the sender's paragraphs without this template
+                   ever rewriting the string. Swapping newlines for <br> would
+                   mean editing the text after escaping, which is precisely how
+                   an injection gets reintroduced. */}}
+              <div style="white-space:pre-wrap; word-break:break-word;">{{.Message}}</div>
+            </td>
+          </tr>
+
+          <!-- reply button -->
+          <tr>
+            <td style="padding:24px 28px 0 28px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="btn" style="background:#1D7D3E; border-radius:3px;">
+                    <a href="mailto:{{.Email}}?subject={{.ReplySubject}}" class="btn"
+                       style="display:inline-block; padding:11px 20px; font-family:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; font-size:13px; color:#FFFFFF; text-decoration:none;">$ reply to {{.FirstName}}</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- footer -->
+          <tr>
+            <td style="padding:24px 28px 26px 28px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td class="rule" style="height:1px; line-height:1px; font-size:0; background:#D4D8DD;">&nbsp;</td></tr>
+              </table>
+              <p class="ink-faint" style="margin:14px 0 0 0; font-family:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; font-size:12px; line-height:1.5; color:#5D6E80;">
+                sent from the contact form at <a href="{{.SiteURL}}" class="ink-faint" style="color:#5D6E80;">{{.SiteHost}}</a><br>
+                {{.Received}}
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
+{{end}}

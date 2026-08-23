@@ -1,0 +1,49 @@
+{{define "content"}}
+<section class="page-header">
+  <p class="eyebrow" aria-hidden="true">~/skills</p>
+  <h1>Skills</h1>
+</section>
+
+<div class="skill-grid">
+  {{range .CV.Skills}}
+  <div class="skill-group">
+    <h2>{{.Category}}</h2>
+    <div class="skill-badges">
+      {{range .Skills}}<span class="tag">{{.}}</span>{{end}}
+    </div>
+  </div>
+  {{end}}
+</div>
+
+<section class="education">
+  <h2 class="eyebrow"><span aria-hidden="true">~/</span>education</h2>
+  <div class="education-list">
+    {{range .CV.Education}}
+    <div class="education-item">
+      <div>
+        <div class="education-institution">{{.Institution}}</div>
+        <div class="education-program">{{.Program}}</div>
+      </div>
+      <div class="education-dates">{{.Start}} — {{.End}}</div>
+    </div>
+    {{if .Detail}}
+    <ul class="education-detail" role="list">
+      {{range .Detail}}<li>{{.}}</li>{{end}}
+    </ul>
+    {{end}}
+    {{end}}
+  </div>
+</section>
+
+<section class="education">
+  <h2 class="eyebrow"><span aria-hidden="true">~/</span>languages</h2>
+  <dl class="language-list">
+    {{range .CV.Languages}}
+    <div class="language-row">
+      <dt class="language-name">{{.Name}}</dt>
+      <dd class="language-level">{{.Level}}</dd>
+    </div>
+    {{end}}
+  </dl>
+</section>
+{{end}}

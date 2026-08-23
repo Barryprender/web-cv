@@ -1,0 +1,78 @@
+{{define "content"}}
+<section class="page-header">
+  <p class="eyebrow" aria-hidden="true">~/contact</p>
+  <h1>Contact</h1>
+</section>
+
+<div class="contact-layout">
+  {{/* <address> is the element for contact details, and a description list
+       is what label/value pairs actually are. The em dash separator is
+       decorative and comes from CSS. */}}
+  <address class="contact-details">
+    <dl class="contact-list">
+      <div class="contact-row">
+        <dt class="contact-label">email</dt>
+        <dd class="contact-value"><a href="mailto:{{.CV.Contact.Email}}">{{.CV.Contact.Email}}</a></dd>
+      </div>
+      <div class="contact-row">
+        <dt class="contact-label">phone</dt>
+        <dd class="contact-value">{{.CV.Contact.Phone}}</dd>
+      </div>
+      <div class="contact-row">
+        <dt class="contact-label">linkedin</dt>
+        <dd class="contact-value"><a href="{{.CV.Contact.LinkedIn}}">{{.CV.Contact.LinkedIn}}</a></dd>
+      </div>
+      <div class="contact-row">
+        <dt class="contact-label">github</dt>
+        <dd class="contact-value"><a href="{{.CV.Contact.GitHub}}">{{.CV.Contact.GitHub}}</a></dd>
+      </div>
+      <div class="contact-row">
+        <dt class="contact-label">base</dt>
+        <dd class="contact-value">{{.CV.Contact.Location}}</dd>
+      </div>
+      <div class="contact-row">
+        <dt class="contact-label">cv</dt>
+        <dd class="contact-value"><a href="/cv.pdf" download>download as PDF</a></dd>
+      </div>
+    </dl>
+  </address>
+
+  <cv-contact-form>
+    <form class="contact-form" method="post" action="/contact">
+      <div class="field">
+        <label for="name">Name</label>
+        <input id="name" name="name" type="text" required autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" required autocomplete="email">
+      </div>
+      <div class="field">
+        <label for="message">Message</label>
+        <textarea id="message" name="message" required></textarea>
+      </div>
+      <button class="submit-btn" type="submit">$ send message</button>
+      {{/* Rendered server-side so the no-JS POST-redirect-GET result is
+           visible; <cv-contact-form> reuses this same node for fetch
+           submissions rather than appending a second one. tabindex="-1"
+           lets the #form-status redirect fragment move focus here. */}}
+      <p class="form-status{{if eq .Status "sent"}} ok{{else if .Status}} err{{end}}" id="form-status" tabindex="-1" role="status">
+        {{- if eq .Status "sent" -}}
+          Message sent. I will reply soon.
+        {{- else if eq .Status "busy" -}}
+          Too many messages just now. Wait a minute and try again.
+        {{- else if eq .Status "failed" -}}
+          {{/* Delivery failed, not the submission. Nothing about the message
+               needs changing, so the only useful thing to offer is the
+               address that does not depend on this form working. */}}
+          That did not send — something is wrong on my end, not yours.
+          Please email me directly at
+          <a href="mailto:{{.CV.Contact.Email}}">{{.CV.Contact.Email}}</a>.
+        {{- else if eq .Status "error" -}}
+          That did not send. Check every field and try again.
+        {{- end -}}
+      </p>
+    </form>
+  </cv-contact-form>
+</div>
+{{end}}

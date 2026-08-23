@@ -1,0 +1,40 @@
+{{define "content"}}
+<section class="page-header">
+  <p class="eyebrow" aria-hidden="true">~/projects</p>
+  <h1>Projects</h1>
+</section>
+
+<cv-filter data-item=".project" data-noun="project">
+  <div class="project-list">
+  {{range $i, $project := .CV.Projects}}
+  <article class="project" aria-labelledby="project-{{$i}}-name">
+    <div class="project-meta">
+      <div>{{.Role}}</div>
+      {{if .Period}}<div class="project-period">{{.Period}}</div>{{end}}
+    </div>
+    <div class="project-body">
+      <h2 id="project-{{$i}}-name">{{.Name}}</h2>
+      {{if .Links}}
+      <ul class="entry-links" role="list">
+        {{range .Links}}<li><a href="{{.URL}}">{{.Label}}</a></li>{{end}}
+      </ul>
+      {{end}}
+      <p class="project-summary">{{.Summary}}</p>
+
+      {{if .Bullets}}
+      <ul class="project-bullets">
+        {{range .Bullets}}<li>{{.}}</li>{{end}}
+      </ul>
+      {{end}}
+
+      {{if .Stack}}
+      <div class="project-stack">
+        {{range .Stack}}<span class="tag" data-stack="{{.}}">{{.}}</span>{{end}}
+      </div>
+      {{end}}
+    </div>
+  </article>
+  {{end}}
+  </div>
+</cv-filter>
+{{end}}

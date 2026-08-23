@@ -1,0 +1,38 @@
+{{define "content"}}
+<section class="hero">
+  <div class="prompt">
+    <span>barry@prendergast</span><span class="sigil">:~$</span> whoami<span class="cursor"></span>
+  </div>
+
+  <h1><span class="hero-name">{{.CV.Name}}</span></h1>
+
+  <p class="lede">{{.CV.Tagline}}</p>
+
+  <hr class="rule">
+
+  <div class="hero-tags">
+    <span class="tag">[angular]</span>
+    <span class="tag">[typescript]</span>
+    <span class="tag">[go]</span>
+    <span class="tag">[owasp]</span>
+    <span class="tag">[web-components]</span>
+  </div>
+
+  <div class="hero-actions">
+    <a class="cta" href="/experience">
+      $ view experience
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+    </a>
+    <a class="cta quiet" href="/contact">$ contact --email</a>
+    {{/* download makes the browser save rather than navigate, and names the
+         file; the server sends the same name in Content-Disposition for
+         anyone who opens the URL directly. */}}
+    <a class="cta quiet" href="/cv.pdf" download>$ get cv.pdf</a>
+  </div>
+</section>
+
+<section class="status-row">
+  <span>// {{.CV.Status}}</span>
+  <span class="status-availability"><span class="status-dot"></span>AVAILABLE</span>
+</section>
+{{end}}

@@ -1,0 +1,27 @@
+# Compiled binaries. The server builds to whatever -o names; these are the
+# shapes it takes when built locally rather than in Docker.
+/server
+/server.exe
+/pdfgen
+/pdfgen.exe
+*.exe
+*.test
+
+# Go build and coverage output.
+*.out
+coverage.*
+
+# Editor and OS noise.
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Local Claude Code state. The output style is a personal preference, not a
+# property of the project.
+.claude/
+
+# Rendered email samples written by render_sample_test.go when EMAIL_SAMPLE is
+# set. They are a design aid, not source.
+sample-email.html

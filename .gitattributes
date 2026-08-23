@@ -1,0 +1,17 @@
+# Normalise text to LF in the repository. Without this, a Windows checkout
+# commits CRLF and the same file differs byte-for-byte between machines —
+# which matters here because the static handler hashes file contents to build
+# its cache-busting URLs.
+* text=auto
+
+# Binary, explicitly. Git's own detection would get these right, but the
+# generated PDF is the one file where a line-ending conversion would corrupt
+# the artefact silently: it is committed output, and TestPDFIsCurrent compares
+# it byte-for-byte against a fresh build.
+*.pdf   binary
+*.woff2 binary
+*.png   binary
+*.ico   binary
+
+# Go source is always LF, whatever the platform.
+*.go text eol=lf

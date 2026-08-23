@@ -1,0 +1,17 @@
+# Everything the build does not need. Keeping the context small matters more
+# than usual here: `fly deploy` uploads it over the network on every build.
+.git
+.gitignore
+.claude
+.dockerignore
+Dockerfile
+fly.toml
+README.md
+
+# Tests and their fixtures are not part of the binary.
+**/*_test.go
+
+# Local build output, should any exist.
+/server
+/server.exe
+/tmp-*

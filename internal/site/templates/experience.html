@@ -1,0 +1,56 @@
+{{define "content"}}
+<section class="page-header">
+  <p class="eyebrow" aria-hidden="true">~/experience</p>
+  <h1>Experience</h1>
+</section>
+
+<cv-filter data-item=".timeline-item" data-noun="role">
+  <cv-timeline>
+  {{range $i, $job := .CV.Jobs}}
+  <article class="timeline-item" aria-labelledby="job-{{$i}}-name">
+    <div class="timeline-meta">
+      <div>{{.Start}} — {{.End}}</div>
+      {{if .Location}}<div class="timeline-location">{{.Location}}</div>{{end}}
+    </div>
+    <div class="timeline-body">
+      <h2 id="job-{{$i}}-name">{{.Company}}</h2>
+      <div class="timeline-role">{{.Title}}</div>
+      {{if .Summary}}<p class="timeline-summary">{{.Summary}}</p>{{end}}
+
+      {{if .Bullets}}
+      <button class="timeline-toggle" type="button"
+              aria-expanded="false" aria-controls="job-{{$i}}-details">
+        {{/* Only the label span is rewritten by cv-timeline.js, so the company
+             name stays part of the button's accessible name in both states. */}}
+        <span class="timeline-toggle-label">+ details</span>
+        <span class="visually-hidden"> for {{.Company}}</span>
+      </button>
+      <div class="timeline-reveal" id="job-{{$i}}-details">
+        {{/* The inner element is the overflow box. Padding on the list itself
+             would keep rendering at a zero-height track and leave a 16px gap
+             while collapsed. */}}
+        <div class="timeline-reveal-inner">
+          <ul class="timeline-bullets">
+            {{range .Bullets}}<li>{{.}}</li>{{end}}
+          </ul>
+        </div>
+      </div>
+      {{end}}
+
+      {{if .Links}}
+      <ul class="entry-links" role="list">
+        {{range .Links}}<li><a href="{{.URL}}">{{.Label}}</a></li>{{end}}
+      </ul>
+      {{end}}
+
+      {{if .Stack}}
+      <div class="timeline-stack">
+        {{range .Stack}}<span class="tag" data-stack="{{.}}">{{.}}</span>{{end}}
+      </div>
+      {{end}}
+    </div>
+  </article>
+  {{end}}
+  </cv-timeline>
+</cv-filter>
+{{end}}

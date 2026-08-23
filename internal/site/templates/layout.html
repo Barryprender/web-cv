@@ -1,0 +1,100 @@
+{{define "layout"}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}}</title>
+  <meta name="description" content="{{.Description}}">
+  <link rel="canonical" href="{{.Canonical}}">
+
+  <meta property="og:type" content="profile">
+  <meta property="og:site_name" content="Barry Prendergast">
+  <meta property="og:title" content="{{.Title}}">
+  <meta property="og:description" content="{{.Description}}">
+  <meta property="og:url" content="{{.Canonical}}">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:image" content="{{.CV.Contact.Site}}/static/apple-touch-icon.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="{{.Title}}">
+  <meta name="twitter:description" content="{{.Description}}">
+
+  <link rel="icon" href="{{asset "favicon.svg"}}" type="image/svg+xml">
+  <link rel="icon" href="{{asset "favicon-32.png"}}" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="{{asset "apple-touch-icon.png"}}">
+
+  <link rel="stylesheet" href="{{asset "css/style.css"}}">
+  <script type="module" src="{{asset "js/main.js"}}"></script>
+
+  {{/* schema.org/Person, generated from the CV values in internal/data. */}}
+  <script type="application/ld+json">{{.JSONLD}}</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <cv-nav>
+    <nav class="nav-inner" aria-label="Main">
+      <a class="nav-logo" href="/">BP_</a>
+      <ul class="nav-links" id="nav-links" role="list">
+        <li><a href="/" {{if eq .Active "home"}}aria-current="page"{{end}}>home</a></li>
+        <li><a href="/experience" {{if eq .Active "experience"}}aria-current="page"{{end}}>experience</a></li>
+        <li><a href="/projects" {{if eq .Active "projects"}}aria-current="page"{{end}}>projects</a></li>
+        <li><a href="/skills" {{if eq .Active "skills"}}aria-current="page"{{end}}>skills</a></li>
+        <li><a href="/contact" {{if eq .Active "contact"}}aria-current="page"{{end}}>contact</a></li>
+      </ul>
+      <div class="nav-actions">
+        {{/* popovertarget opens the panel with no JavaScript at all; cv-palette.js
+             only adds the keyboard shortcut and the filter field on top. */}}
+        <button class="nav-palette-btn" type="button" popovertarget="command-palette"
+                aria-label="Open quick jump">
+          <span class="palette-key" aria-hidden="true">⌘K</span>
+        </button>
+        <cv-theme-toggle></cv-theme-toggle>
+        <button class="nav-mobile-btn" type="button" aria-label="Toggle menu"
+                aria-expanded="false" aria-controls="nav-links">
+          <span aria-hidden="true">≡</span>
+        </button>
+      </div>
+    </nav>
+  </cv-nav>
+
+  <main class="wrap" id="main">
+    {{template "content" .}}
+  </main>
+
+  {{/* Rendered server-side, so every destination is a real link that works
+       before any script runs. Deliberately no headings inside: they would join
+       the document outline of every page. */}}
+  <div id="command-palette" popover class="palette" aria-label="Quick jump">
+    <div class="palette-panel">
+      <div class="palette-list">
+        <p class="palette-group">pages</p>
+        <a class="palette-item" href="/">home<span class="palette-meta">the short version</span></a>
+        <a class="palette-item" href="/experience">experience<span class="palette-meta">{{len .CV.Jobs}} roles</span></a>
+        <a class="palette-item" href="/projects">projects<span class="palette-meta">{{len .CV.Projects}} builds</span></a>
+        <a class="palette-item" href="/skills">skills<span class="palette-meta">stack and education</span></a>
+        <a class="palette-item" href="/contact">contact<span class="palette-meta">{{.CV.Contact.Location}}</span></a>
+
+        <p class="palette-group">roles</p>
+        {{range $i, $job := .CV.Jobs}}
+        <a class="palette-item" href="/experience#job-{{$i}}-name">{{.Company}}<span class="palette-meta">{{.Title}}</span></a>
+        {{end}}
+
+        <p class="palette-group">projects</p>
+        {{range $i, $project := .CV.Projects}}
+        <a class="palette-item" href="/projects#project-{{$i}}-name">{{.Name}}<span class="palette-meta">{{.Role}}</span></a>
+        {{end}}
+      </div>
+      <p class="palette-empty" hidden>No matches.</p>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <span>© {{.Year}} Barry Prendergast</span>
+      <span>{{.CV.Contact.Location}}</span>
+    </div>
+  </footer>
+</body>
+</html>
+{{end}}
