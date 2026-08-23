@@ -253,9 +253,12 @@ var Me = struct {
 			Stack: []string{"Go", "SQLite", "htmx", "Fly.io"},
 		},
 		{
-			Name:    "Archway Orthotics Portal",
-			Role:    "Client engagement",
-			Period:  "June 2026 — July 2026",
+			Name:   "Archway Orthotics Portal",
+			Role:   "Client engagement",
+			Period: "June 2026 — July 2026",
+			Links: []Link{
+				{Label: "archway-orthotics-portal.fly.dev", URL: "https://archway-orthotics-portal.fly.dev"},
+			},
 			Summary: "Practitioner-to-lab ordering portal for an Irish medical-device manufacturer, replacing an email and Dropbox workflow.",
 			Bullets: []string{
 				"Replaced an email/Dropbox process with a structured portal: practitioners register patients and submit a digital prescription with a 3D foot scan, and the lab moves orders through a manufacturing pipeline and pulls scans for CAD/CAM milling",
