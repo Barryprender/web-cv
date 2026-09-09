@@ -2,7 +2,14 @@
 #
 # The go.mod has no requires, so there is no dependency download step and
 # nothing to cache — the whole build is the standard library plus this source.
-FROM golang:1.25-alpine AS build
+#
+# The version is pinned exactly, not floated on golang:1.25-alpine, and the
+# floor is 1.25.13 because govulncheck reports 22 reachable standard-library
+# vulnerabilities below it — in crypto/tls, crypto/x509, html/template,
+# net/http, net/url and net/mail, all of which this server is built out of.
+# Raise this together with the go directive in go.mod and go-version in
+# .github/workflows/ci.yml; a mismatch means CI is not testing what ships.
+FROM golang:1.25.13-alpine AS build
 
 WORKDIR /src
 COPY . .

@@ -1,0 +1,93 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "metadata": {
+    "tools": [
+      {
+        "vendor": "CycloneDX",
+        "name": "cyclonedx-gomod",
+        "version": "v1.9.0",
+        "hashes": [
+          {
+            "alg": "MD5",
+            "content": "ab82cd672c2d0414a3320a4e6d239c7a"
+          },
+          {
+            "alg": "SHA-1",
+            "content": "449b9292cea4f7f69ca06f94695ead298c4116f0"
+          },
+          {
+            "alg": "SHA-256",
+            "content": "b58a3d8a290c667d432c369f437254829bb3c1ee00db44ff4e2ef996d9e53493"
+          },
+          {
+            "alg": "SHA-384",
+            "content": "d445802666fbc19e6198b1c91db5a7d18c552af776abaca8b94df6dd501978818c9dc9726dfd8d08fb8c207e2fe80b71"
+          },
+          {
+            "alg": "SHA-512",
+            "content": "673ebd993f7d39b57c77040e902546bed0032e35c27395a6440fc369fae533ce5e76bab681699ac1d29adea64f56dc5c6d611959467fb317885ffcc7e8d9eb4d"
+          }
+        ],
+        "externalReferences": [
+          {
+            "url": "https://github.com/CycloneDX/cyclonedx-gomod",
+            "type": "vcs"
+          },
+          {
+            "url": "https://cyclonedx.org",
+            "type": "website"
+          }
+        ]
+      }
+    ],
+    "component": {
+      "bom-ref": "pkg:golang/barrypre.com/webcv@v0.0.0-devel?type=module#cmd/server",
+      "type": "application",
+      "name": "barrypre.com/webcv",
+      "version": "v0.0.0-devel",
+      "purl": "pkg:golang/barrypre.com/webcv@v0.0.0-devel?type=module\u0026goos=linux\u0026goarch=amd64#cmd/server",
+      "properties": [
+        {
+          "name": "cdx:gomod:build:env:CGO_ENABLED",
+          "value": "0"
+        },
+        {
+          "name": "cdx:gomod:build:env:GOARCH",
+          "value": "amd64"
+        },
+        {
+          "name": "cdx:gomod:build:env:GOOS",
+          "value": "linux"
+        },
+        {
+          "name": "cdx:gomod:build:env:GOVERSION",
+          "value": "go1.25.13"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:golang/std@go1.25.13?type=module",
+      "type": "library",
+      "name": "std",
+      "version": "go1.25.13",
+      "scope": "required",
+      "purl": "pkg:golang/std@go1.25.13?type=module\u0026goos=linux\u0026goarch=amd64"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:golang/barrypre.com/webcv@v0.0.0-devel?type=module#cmd/server",
+      "dependsOn": [
+        "pkg:golang/std@go1.25.13?type=module"
+      ]
+    },
+    {
+      "ref": "pkg:golang/std@go1.25.13?type=module"
+    }
+  ]
+}

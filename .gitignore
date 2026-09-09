@@ -25,3 +25,8 @@ Thumbs.db
 # Rendered email samples written by render_sample_test.go when EMAIL_SAMPLE is
 # set. They are a design aid, not source.
 sample-email.html
+
+# Scratch output from running the CI gates locally. The committed artifacts are
+# sbom.json and internal/site/static/cv.pdf; these are the comparison copies.
+sbom.regenerated.json
+verbose.txt

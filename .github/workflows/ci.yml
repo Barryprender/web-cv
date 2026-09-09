@@ -1,0 +1,174 @@
+# CI for barrypre.com.
+#
+# Every job here fails the build. Nothing warns, nothing is advisory, and there
+# is no `continue-on-error` or `|| true` anywhere in this file — a check that
+# reports a problem and lets the merge through is not a check.
+#
+# The Go version is pinned exactly and appears in three places: here, the `go`
+# directive in go.mod, and the builder image in the Dockerfile. The floor is
+# 1.25.13 because govulncheck reports 22 reachable standard-library
+# vulnerabilities below it, in crypto/tls, crypto/x509, html/template,
+# net/http, net/url and net/mail — every package this server is built out of.
+# Raise all three together; a mismatch means CI is not testing what ships.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.25.13"
+
+jobs:
+  build:
+    name: Build, vet and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: false
+
+      # gofmt reports on stdout and exits 0 whether or not it found anything,
+      # so the exit code has to be built from its output.
+      - name: Formatting
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "these files are not gofmt'd:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      # -count=1 defeats the test result cache. A cached pass is a pass from a
+      # previous commit's code, which is exactly the thing this job exists to
+      # stop trusting.
+      #
+      # -coverpkg=./internal/... measures every internal package from every
+      # test binary, so coverage of internal/data reached through the site
+      # handlers counts. Per-package coverage would report internal/data at
+      # zero and hide the fact that it is exercised.
+      - name: Test
+        run: |
+          go test ./... -count=1 -coverpkg=./internal/... -coverprofile=coverage.out
+          go tool cover -func=coverage.out | tail -1
+
+      # A skipped test reports as a pass. This project has no database and no
+      # service container, so the silent-skip risk is not infrastructure: it is
+      # a test that quietly opts itself out on a missing environment variable
+      # and takes its assertions with it. Exactly one test is allowed to do
+      # that — TestRenderSample, which writes an email sample for eyeballing
+      # and is a design aid rather than a check. Any other skip is a real test
+      # that stopped running, and the build should not be green.
+      - name: Prove no test opted itself out
+        run: |
+          go test ./... -count=1 -v > verbose.txt 2>&1 || true
+          unexpected="$(grep -- "--- SKIP" verbose.txt | grep -v "TestRenderSample" || true)"
+          if [ -n "$unexpected" ]; then
+            echo "tests skipped that are not the documented sample writer:"
+            echo "$unexpected"
+            exit 1
+          fi
+
+      # TestPDFIsCurrent already fails when static/cv.pdf disagrees with
+      # internal/data, but it compares against the committed bytes. This proves
+      # the generator itself still runs and is reproducible: if `go generate`
+      # produced a different file, the working tree would now be dirty.
+      - name: Prove the committed cv.pdf regenerates byte-for-byte
+        run: |
+          go generate ./internal/site
+          if ! git diff --quiet -- internal/site/static/cv.pdf; then
+            echo "go generate ./internal/site changed the committed PDF"
+            git diff --stat -- internal/site/static/cv.pdf
+            exit 1
+          fi
+
+  vulncheck:
+    name: Vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: false
+
+      # Pinned, not @latest: with a floating version this gate's own verdict
+      # can change without a commit to this repository, and a red build nobody
+      # caused is a red build nobody believes.
+      #
+      # This project has no third-party dependencies, so every finding here is
+      # a standard-library one and the only fix is raising GO_VERSION.
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
+
+      - name: govulncheck
+        run: govulncheck ./...
+
+  sbom:
+    name: SBOM freshness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: false
+
+      - name: Install cyclonedx-gomod
+        run: go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.9.0
+
+      # A committed SBOM that nobody regenerates is worse than none, because it
+      # is believed.
+      #
+      # The build constraints are the deployed artifact's, not a developer's
+      # laptop's: module and package selection depends on GOOS/GOARCH/CGO, so
+      # an SBOM generated on Windows is not an SBOM of the container that ships.
+      #
+      # -std includes the Go standard library as a component. For most projects
+      # that is noise; here it is the entire dependency list, and it is what
+      # makes a toolchain bump without a regenerated SBOM fail this job.
+      #
+      # Two fields are volatile and are normalised away by the sed: the
+      # generation timestamp, and the main component's pseudo-version, which is
+      # derived from the git commit and would therefore change on every commit
+      # regardless of whether anything about the dependencies did.
+      - name: Regenerate and compare
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+            cyclonedx-gomod app -json -std -noserial -main ./cmd/server -output - \
+            | sed -E '/^    "timestamp": /d; s/v0\.0\.0-[0-9]{14}-[0-9a-f]{12}/v0.0.0-devel/g' \
+            > sbom.regenerated.json
+          if ! diff -u sbom.json sbom.regenerated.json; then
+            echo "sbom.json is stale. Regenerate it with the command in SECURITY.md and commit the result."
+            exit 1
+          fi
+
+  image:
+    name: Container image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Dockerfile asserts the binary is static and the runtime stage is
+      # distroless with no shell in it. Neither claim is exercised by go build,
+      # so the image is built here rather than first discovered broken by a
+      # `fly deploy`.
+      - name: Build
+        run: docker build -t barrypre-web:ci .
