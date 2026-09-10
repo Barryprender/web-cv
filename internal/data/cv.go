@@ -209,6 +209,15 @@ var Me = struct {
 			Stack: []string{"HTML5", "CSS3", "jQuery", "Bootstrap"},
 		},
 		{
+			Company:  "Full-time study",
+			Title:    "Web Application Development, Ondas Formación",
+			Kind:     "break",
+			Start:    "September 2012",
+			End:      "December 2012",
+			Location: "Madrid",
+			Summary:  "Retrained on HTML5, CSS3, JavaScript and jQuery (see Education).",
+		},
+		{
 			Company:  "Mercantis",
 			Title:    "Web Layout Developer",
 			Start:    "2008",
@@ -302,6 +311,6 @@ var Me = struct {
 				"Final project: group penetration test against a deliberately vulnerable web application, documented in English and Spanish",
 			},
 		},
-		{Institution: "Ondas Formación", Program: "Web Application Development — HTML5, CSS3, JavaScript, jQuery", Start: "2012", End: "2012"},
+		{Institution: "Ondas Formación", Program: "Web Application Development — HTML5, CSS3, JavaScript, jQuery", Start: "September 2012", End: "December 2012"},
 	},
 }
