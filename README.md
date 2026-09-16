@@ -1,17 +1,23 @@
 # barrypre.com
 
-Barry Prendergast's CV site. Go stdlib backend, native Web Components on the
-frontend, zero external JS/CSS dependencies.
+Barry Prendergast's CV site. Go standard-library backend, native Web Components
+on the frontend, zero external runtime dependencies — `go.mod` requires nothing
+but Go itself, and no JavaScript, CSS or font is fetched from a third party.
 
 ## Stack
 
 - **Backend**: `net/http` (Go 1.22+ method-tagged routing), `html/template`,
   everything embedded into one binary via `embed.FS`. No framework.
 - **Frontend**: native custom elements (`<cv-nav>`, `<cv-theme-toggle>`,
-  `<cv-timeline>`, `<cv-contact-form>`), loaded as a plain ES module — no
-  bundler, no npm dependency. Content stays in the light DOM so it's
-  crawlable and works with JS disabled; the elements only add behavior
-  (mobile menu, theme persistence, scroll-reveal, form submission).
+  `<cv-filter>`, `<cv-timeline>`, `<cv-contact-form>`) plus two plain modules
+  (`cv-palette.js`, `cv-transitions.js`), loaded as ES modules — no bundler, no
+  npm dependency. Content stays in the light DOM so it is crawlable and works
+  with JavaScript disabled; the scripts only add behaviour (mobile menu, theme
+  and palette persistence, filtering, scroll-reveal, view transitions, form
+  submission).
+- **Fonts**: Public Sans, Newsreader and JetBrains Mono, self-hosted as
+  subsetted woff2 files under `internal/site/static/fonts`. Nothing is
+  requested from a font CDN.
 - **Content**: `internal/data/cv.go` is the single source of truth. Templates
   render from it — edit the Go values, not the HTML, to update the CV.
 - **Email**: `internal/mail` sends contact form submissions through Resend or
@@ -21,12 +27,6 @@ frontend, zero external JS/CSS dependencies.
   (base-14 fonts, one Flate content stream per page, real link annotations).
   `internal/cvpdf` lays the CV out with it. The file is generated at build
   time, not per request, so a visitor cannot make the server render anything.
-
-Originally planned to use `templ` (matching the stack on your other Fly.io
-project) but this sandbox's network allowlist blocked `proxy.golang.org`, so
-it fell back to `html/template` — arguably the better call anyway per your
-own rule to avoid frameworks unless needed. Swapping to `templ` later is a
-templates-only change if you want the extra type safety.
 
 ## Run locally
 
@@ -88,6 +88,10 @@ reaches them. It is parsed with `net/mail` and rejected unless it is a bare
 address — that field is the one piece of visitor input that ends up in an email
 header.
 
+`POST /contact` sits behind a per-IP token bucket (`internal/site/ratelimit.go`)
+with a capped tracking map, so neither the endpoint nor the inbox behind it can
+be flooded by a single client.
+
 ## Structure
 
 ```
@@ -98,9 +102,26 @@ internal/mail/             Resend + Postmark senders, failover chain, env config
 internal/pdf/              minimal stdlib PDF writer (no dependencies)
 internal/cvpdf/            CV page layout, built on internal/pdf
 internal/site/site.go      routes, embed directives, contact handler
+internal/site/security.go  CSP and the rest of the security headers
+internal/site/static.go    embedded asset handler: ETags, content types, 304s
+internal/site/ratelimit.go per-IP token bucket for POST /contact
+internal/site/seo.go       canonical URLs, JSON-LD, robots.txt, sitemap.xml
+internal/site/email.go     HTML + text rendering of a contact message
 internal/site/templates/   html/template files (layout + one per page)
-internal/site/static/      css + js + cv.pdf, embedded into the binary
+internal/site/static/      css + js + fonts + icons + cv.pdf, all embedded
 ```
+
+Beyond the content pages, the server answers `GET /cv.pdf`, `GET /robots.txt`,
+`GET /sitemap.xml`, `GET /healthz`, `GET /favicon.ico`, `GET /static/…` and
+`POST /contact`.
+
+## Security headers
+
+`internal/site/security.go` sets a Content-Security-Policy that denies
+everything by default and carries no `unsafe-` token: every script ships as an
+external module under `/static`, and no template sets a `style="…"` attribute.
+Adding one would mean loosening `style-src` for the whole site, so do not add
+one.
 
 ## The CV download
 
@@ -134,6 +155,10 @@ guarantees the browser's leg is HTTPS; Fly terminates TLS at its proxy, so
 a forwarded header any client could set. Do not set it anywhere without
 `force_https`.
 
+The contact form stays fail-closed in production until `CONTACT_FROM` and at
+least one provider key are set as Fly secrets and the sending domain is
+verified with that provider.
+
 ## Verification and compliance
 
 - `.github/workflows/ci.yml` — format, vet, build, tests with coverage, skip
@@ -151,13 +176,31 @@ The Go version is pinned in three places — `go.mod`, `Dockerfile` and
 because `govulncheck` reports 22 reachable standard-library vulnerabilities
 below it.
 
-Coverage is 94.7% of statements across `./internal/...`.
+Coverage is 94.7% of statements across `./internal/...`, measured the way CI
+measures it:
 
-## Still open
+```
+go test ./... -count=1 -coverpkg=./internal/... -coverprofile=coverage.out
+go tool cover -func=coverage.out | tail -1
+```
 
-- Set `CONTACT_FROM` and at least one provider key in the Fly secrets before
-  this goes live, and verify the sending domain with that provider — the form
-  is fail-closed until you do.
-- There's a 14-month gap in the experience data between Arcmedia AG (ended
-  July 2019) and Quality Compusoft (started September 2020) — carried over from
-  the LinkedIn export as-is; fill in or explain if you want it covered.
+`-coverpkg` matters here: per-package coverage reports `internal/data` at 0%,
+because it holds no logic of its own and is reached through the site handlers.
+
+## Reporting a security issue
+
+See `SECURITY.md`. Please do not open a public issue for a vulnerability.
+
+## Licence
+
+The code is MIT licensed — see `LICENSE`.
+
+The CV content is not. `internal/data/cv.go`, the generated `cv.pdf`, the
+fixtures in the tests, and the personal details throughout are Barry
+Prendergast's own, and the MIT grant does not extend to them. Reuse the site,
+not the CV.
+
+The bundled fonts carry their own licence: Public Sans, Newsreader and
+JetBrains Mono are all SIL Open Font License 1.1. The text and the copyright
+notices ship beside them in `internal/site/static/fonts/OFL.txt`, which is
+embedded with the fonts and served at `/static/fonts/OFL.txt`.
