@@ -19,13 +19,27 @@ import (
 // body column holds everything else, mirroring the timeline layout on the site.
 const (
 	marginX = 48.0
-	marginY = 46.0
+	marginY = 42.0
 
 	metaWidth = 88.0 // dates and location
 	metaGap   = 16.0
 	bodyX     = marginX + metaWidth + metaGap
 
-	footerHeight = 30.0 // space reserved below the content for the running footer
+	footerHeight = 22.0 // space reserved below the content for the running footer
+)
+
+// Editorial limits. The site is the full record and scrolls for free; the PDF
+// is the two-page version a recruiter reads in half a minute, so it renders a
+// subset of the same data rather than a different set of facts.
+//
+// Both numbers are tuned against page count. TestFitsTwoPages fails if a change
+// to the CV pushes the document past two pages, which is the signal to cut
+// copy rather than to raise these.
+const (
+	detailedRoles   = 2 // employers whose bullets and stack are printed
+	jobBullets      = 3 // bullets printed per detailed role
+	projectBullets  = 2 // bullets printed per project
+	detailedProject = 3 // projects printed in full before the rest go to one line
 )
 
 // Type sizes and leadings, in points.
@@ -39,7 +53,7 @@ const (
 	companySize = 10.5
 	roleSize    = 9.5
 	summarySize = 9.0
-	bulletSize  = 8.8
+	bulletSize  = 8.6
 	metaSize    = 8.0
 	stackSize   = 7.8
 )
@@ -74,7 +88,6 @@ func Build() []byte {
 	b.projects()
 	b.skills()
 	b.education()
-	b.languages()
 	b.footer()
 
 	return b.doc.Bytes()
@@ -178,10 +191,10 @@ func (b *builder) contactLine(items []item) {
 func (b *builder) section(title string) {
 	d := b.doc
 	b.ensure(52)
-	d.Advance(16)
+	d.Advance(12)
 	d.TextLine(marginX, strings.ToUpper(title), pdf.Bold, sectionSize, sectionSize+5, ink)
 	d.Rule(marginX, d.ContentWidth(), 0.6, rule)
-	d.Advance(10)
+	d.Advance(8)
 }
 
 // entry draws one two-column record: metrics on the left, content on the right.
@@ -200,7 +213,7 @@ func (b *builder) entry(meta []string, body func()) {
 	}
 	d.SetY(start)
 	body()
-	d.Advance(14)
+	d.Advance(8)
 }
 
 // heading draws an entry's title pair: the name in bold, the role under it.
@@ -227,6 +240,15 @@ func (b *builder) paragraph(text string, size float64, colour pdf.Color) {
 	}
 }
 
+// first returns at most n items, for the places where the PDF prints a subset
+// of what the site shows.
+func first(items []string, n int) []string {
+	if len(items) <= n {
+		return items
+	}
+	return items[:n]
+}
+
 // bullets draws a hanging-indent list.
 func (b *builder) bullets(items []string) {
 	if len(items) == 0 {
@@ -235,7 +257,7 @@ func (b *builder) bullets(items []string) {
 	d := b.doc
 	const (
 		indent  = 11.0
-		leading = bulletSize + 3.6
+		leading = bulletSize + 2.8
 	)
 	d.Advance(4)
 	for _, item := range items {
@@ -289,51 +311,74 @@ func (b *builder) links(items []data.Link) {
 	d.Advance(size + 2)
 }
 
-// stack draws the technology line under an entry.
-func (b *builder) stack(items []string) {
-	if len(items) == 0 {
-		return
-	}
+// oneLine draws an entry reduced to a single line: the employer in bold and the
+// title beside it. Used for the older roles, where a reader wants the shape of
+// the career rather than what each job involved.
+func (b *builder) oneLine(name, title string) {
 	d := b.doc
-	d.Advance(4)
-	for _, line := range pdf.Wrap(strings.Join(items, "  ·  "), pdf.Regular, stackSize, b.bodyWidth()) {
-		b.ensure(stackSize + 3)
-		d.TextLine(bodyX, line, pdf.Regular, stackSize, stackSize+3, inkFine)
+	w := pdf.Width(name, pdf.Bold, companySize)
+	d.Text(bodyX, d.Y()+companySize, name, pdf.Bold, companySize, ink)
+	if title != "" {
+		const sep = " — "
+		d.Text(bodyX+w, d.Y()+companySize, sep+title, pdf.Italic, roleSize, inkDim)
 	}
+	d.Advance(companySize + 3.5)
 }
 
 func (b *builder) experience() {
 	b.section("Experience")
+
+	// Roles are listed newest first, so this counter is a recency cutoff: the
+	// most recent detailedRoles employers get their bullets, everything older
+	// is reduced to the line a reader actually uses — who, what, when. Career
+	// breaks do not count against the budget, because they carry a single line
+	// already and spending a detail slot on one would push a real role out.
+	detailed := 0
+
 	for _, job := range data.Me.Jobs {
 		meta := []string{job.Start + " — " + job.End}
 		if job.Location != "" {
 			meta = append(meta, job.Location)
 		}
+
+		brief := false
+		if job.IsEmployment() {
+			brief = detailed >= detailedRoles
+			detailed++
+		}
+
 		b.ensure(58)
 		b.entry(meta, func() {
+			if brief {
+				b.oneLine(job.Company, job.Title)
+				return
+			}
 			b.heading(job.Company, job.Title)
 			b.paragraph(job.Summary, summarySize, inkDim)
-			b.bullets(job.Bullets)
+			b.bullets(first(job.Bullets, jobBullets))
 			b.links(job.Links)
-			b.stack(job.Stack)
 		})
 	}
 }
 
 func (b *builder) projects() {
 	b.section("Selected projects")
-	for _, p := range data.Me.Projects {
+	for i, p := range data.Me.Projects {
 		meta := []string{p.Role}
 		if p.Period != "" {
 			meta = append(meta, p.Period)
 		}
+		brief := i >= detailedProject
 		b.ensure(58)
 		b.entry(meta, func() {
 			b.heading(p.Name, "")
 			b.paragraph(p.Summary, summarySize, inkDim)
-			b.bullets(p.Bullets)
+			if brief {
+				b.links(p.Links)
+				return
+			}
+			b.bullets(first(p.Bullets, projectBullets))
 			b.links(p.Links)
-			b.stack(p.Stack)
 		})
 	}
 }
@@ -349,27 +394,37 @@ func (b *builder) skills() {
 			}
 		})
 	}
+	b.languages()
 }
 
 func (b *builder) education() {
 	b.section("Education")
 	for _, e := range data.Me.Education {
-		b.ensure(46)
+		// One line plus the gap after it: the reservation matches what oneLine
+		// actually draws, so a row is not pushed to a new page over space it
+		// was never going to use.
+		b.ensure(companySize + 12)
 		b.entry([]string{e.Start + " — " + e.End}, func() {
-			b.heading(e.Institution, e.Program)
-			b.bullets(e.Detail)
+			b.oneLine(e.Institution, e.Program)
 		})
 	}
 }
 
+// languages draws the spoken languages as a final row of the skills table. It
+// is one line, and a section heading of its own cost more vertical space than
+// the content under it. The row keeps the word "Languages" in the left column,
+// so a CV parser still sees the label it looks for.
 func (b *builder) languages() {
-	b.section("Languages")
+	parts := make([]string, 0, len(data.Me.Languages))
 	for _, l := range data.Me.Languages {
-		b.ensure(24)
-		b.entry([]string{l.Name}, func() {
-			b.doc.TextLine(bodyX, l.Level, pdf.Regular, summarySize, summarySize+4, ink)
-		})
+		parts = append(parts, l.Name+" — "+l.Level)
 	}
+	b.ensure(24)
+	b.entry([]string{"Languages"}, func() {
+		for _, line := range pdf.Wrap(strings.Join(parts, "  ·  "), pdf.Regular, summarySize, b.bodyWidth()) {
+			b.doc.TextLine(bodyX, line, pdf.Regular, summarySize, summarySize+4, ink)
+		}
+	})
 }
 
 // keywords fills the Info dictionary's Keywords entry from the skills, which is

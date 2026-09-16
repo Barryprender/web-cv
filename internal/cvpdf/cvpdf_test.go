@@ -74,17 +74,43 @@ func winAnsi(s string) string {
 	return b.String()
 }
 
+// TestBuildIncludesEveryRole holds the rule that survived the two-page cut:
+// every employer appears. Only the detail is abridged, so no reader can find a
+// role on the site that the PDF silently omitted.
 func TestBuildIncludesEveryRole(t *testing.T) {
 	got := flat(t, Build())
 	for _, job := range data.Me.Jobs {
 		if !strings.Contains(got, winAnsi(job.Company)) {
 			t.Errorf("PDF is missing the role at %q", job.Company)
 		}
-		for _, bullet := range job.Bullets {
+	}
+}
+
+// TestDetailedRolesKeepTheirBullets checks the abridgement is the one intended:
+// the most recent employers print jobBullets of their achievements, rather than
+// the cut quietly reaching a role that should have kept its detail.
+func TestDetailedRolesKeepTheirBullets(t *testing.T) {
+	got := flat(t, Build())
+
+	detailed := 0
+	for _, job := range data.Me.Jobs {
+		if !job.IsEmployment() {
+			continue
+		}
+		if detailed >= detailedRoles {
+			break
+		}
+		detailed++
+
+		for _, bullet := range first(job.Bullets, jobBullets) {
 			if !strings.Contains(got, winAnsi(bullet)) {
 				t.Errorf("%s: bullet missing or garbled: %q", job.Company, bullet)
 			}
 		}
+	}
+
+	if detailed == 0 {
+		t.Fatal("no detailed roles rendered; the CV would carry no achievements at all")
 	}
 }
 

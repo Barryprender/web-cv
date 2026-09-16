@@ -167,6 +167,13 @@ It is sent `inline` with a `Content-Disposition` filename, so the browser's
 viewer opens it while the `download` attribute on the link still saves it as
 `Barry-Prendergast-CV.pdf`.
 
+The PDF is an abridged version of the site, not a copy of it. The site scrolls
+for free; the PDF is what a recruiter reads in half a minute, so it holds two
+pages. Every employer still appears — only the detail is cut, so nothing on the
+site is silently missing from the PDF. The editorial limits are the constants
+at the top of `internal/cvpdf/cvpdf.go`, and `TestFitsTwoPages` fails if added
+copy pushes the document to a third page.
+
 Set in Helvetica rather than the site's Public Sans: embedding a real typeface
 would mean parsing woff2 (Brotli) and subsetting TrueType, neither of which is
 in the standard library. The text is real selectable text either way, which is
