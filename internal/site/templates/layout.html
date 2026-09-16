@@ -1,19 +1,23 @@
 {{define "layout"}}
 <!doctype html>
-<html lang="en">
+<html lang="{{.Lang}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{.Title}}</title>
   <meta name="description" content="{{.Description}}">
   <link rel="canonical" href="{{.Canonical}}">
+  {{/* Every language names every other, itself included: hreflang is only
+       honoured when the set of links is reciprocal. */}}
+  {{range .Alternates}}<link rel="alternate" hreflang="{{.Tag}}" href="{{.Href}}">
+  {{end}}
 
   <meta property="og:type" content="profile">
   <meta property="og:site_name" content="Barry Prendergast">
   <meta property="og:title" content="{{.Title}}">
   <meta property="og:description" content="{{.Description}}">
   <meta property="og:url" content="{{.Canonical}}">
-  <meta property="og:locale" content="en_GB">
+  <meta property="og:locale" content="{{.OGLocale}}">
   <meta property="og:image" content="{{.CV.Contact.Site}}/static/apple-touch-icon.png">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="{{.Title}}">
@@ -30,27 +34,30 @@
   <script type="application/ld+json">{{.JSONLD}}</script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
+  <a class="skip-link" href="#main">{{.UI.SkipToContent}}</a>
 
   <cv-nav>
     <nav class="nav-inner" aria-label="Main">
-      <a class="nav-logo" href="/">BP_</a>
+      <a class="nav-logo" href="{{.Nav.Home}}">BP_</a>
       <ul class="nav-links" id="nav-links" role="list">
-        <li><a href="/" {{if eq .Active "home"}}aria-current="page"{{end}}>home</a></li>
-        <li><a href="/experience" {{if eq .Active "experience"}}aria-current="page"{{end}}>experience</a></li>
-        <li><a href="/projects" {{if eq .Active "projects"}}aria-current="page"{{end}}>projects</a></li>
-        <li><a href="/skills" {{if eq .Active "skills"}}aria-current="page"{{end}}>skills</a></li>
-        <li><a href="/contact" {{if eq .Active "contact"}}aria-current="page"{{end}}>contact</a></li>
+        <li><a href="{{.Nav.Home}}" {{if eq .Active "home"}}aria-current="page"{{end}}>{{.UI.NavHome}}</a></li>
+        <li><a href="{{.Nav.Experience}}" {{if eq .Active "experience"}}aria-current="page"{{end}}>{{.UI.NavExperience}}</a></li>
+        <li><a href="{{.Nav.Projects}}" {{if eq .Active "projects"}}aria-current="page"{{end}}>{{.UI.NavProjects}}</a></li>
+        <li><a href="{{.Nav.Skills}}" {{if eq .Active "skills"}}aria-current="page"{{end}}>{{.UI.NavSkills}}</a></li>
+        <li><a href="{{.Nav.Contact}}" {{if eq .Active "contact"}}aria-current="page"{{end}}>{{.UI.NavContact}}</a></li>
       </ul>
       <div class="nav-actions">
+        {{/* A plain link, so the other language works with no JavaScript and is
+             crawlable. hreflang tells a reader what is on the other end. */}}
+        <a class="nav-lang" href="{{.Switch}}" hreflang="{{.SwitchLang}}" lang="{{.SwitchLang}}">{{.UI.SwitchTo}}</a>
         {{/* popovertarget opens the panel with no JavaScript at all; cv-palette.js
              only adds the keyboard shortcut and the filter field on top. */}}
         <button class="nav-palette-btn" type="button" popovertarget="command-palette"
-                aria-label="Open quick jump">
+                aria-label="{{.UI.OpenQuickJump}}">
           <span class="palette-key" aria-hidden="true">⌘K</span>
         </button>
         <cv-theme-toggle></cv-theme-toggle>
-        <button class="nav-mobile-btn" type="button" aria-label="Toggle menu"
+        <button class="nav-mobile-btn" type="button" aria-label="{{.UI.ToggleMenu}}"
                 aria-expanded="false" aria-controls="nav-links">
           <span aria-hidden="true">≡</span>
         </button>
@@ -65,34 +72,34 @@
   {{/* Rendered server-side, so every destination is a real link that works
        before any script runs. Deliberately no headings inside: they would join
        the document outline of every page. */}}
-  <div id="command-palette" popover class="palette" aria-label="Quick jump">
+  <div id="command-palette" popover class="palette" aria-label="{{.UI.PaletteLabel}}">
     <div class="palette-panel">
       <div class="palette-list">
-        <p class="palette-group">pages</p>
-        <a class="palette-item" href="/">home<span class="palette-meta">the short version</span></a>
-        <a class="palette-item" href="/experience">experience<span class="palette-meta">{{len .CV.Jobs}} roles</span></a>
-        <a class="palette-item" href="/projects">projects<span class="palette-meta">{{len .CV.Projects}} builds</span></a>
-        <a class="palette-item" href="/skills">skills<span class="palette-meta">stack and education</span></a>
-        <a class="palette-item" href="/contact">contact<span class="palette-meta">{{.CV.Contact.Location}}</span></a>
+        <p class="palette-group">{{.UI.PalettePages}}</p>
+        <a class="palette-item" href="{{.Nav.Home}}">{{.UI.NavHome}}<span class="palette-meta">{{.UI.PaletteHome}}</span></a>
+        <a class="palette-item" href="{{.Nav.Experience}}">{{.UI.NavExperience}}<span class="palette-meta">{{len .CV.Jobs}} {{.UI.PaletteRoleN}}</span></a>
+        <a class="palette-item" href="{{.Nav.Projects}}">{{.UI.NavProjects}}<span class="palette-meta">{{len .CV.Projects}} {{.UI.PaletteBuildN}}</span></a>
+        <a class="palette-item" href="{{.Nav.Skills}}">{{.UI.NavSkills}}<span class="palette-meta">{{.UI.PaletteStack}}</span></a>
+        <a class="palette-item" href="{{.Nav.Contact}}">{{.UI.NavContact}}<span class="palette-meta">{{.CV.Contact.Location.In $.Lang}}</span></a>
 
-        <p class="palette-group">roles</p>
+        <p class="palette-group">{{.UI.PaletteRoles}}</p>
         {{range $i, $job := .CV.Jobs}}
-        <a class="palette-item" href="/experience#job-{{$i}}-name">{{.Company}}<span class="palette-meta">{{.Title}}</span></a>
+        <a class="palette-item" href="{{$.Nav.Experience}}#job-{{$i}}-name">{{.Company.In $.Lang}}<span class="palette-meta">{{.Title.In $.Lang}}</span></a>
         {{end}}
 
-        <p class="palette-group">projects</p>
+        <p class="palette-group">{{.UI.PaletteProjects}}</p>
         {{range $i, $project := .CV.Projects}}
-        <a class="palette-item" href="/projects#project-{{$i}}-name">{{.Name}}<span class="palette-meta">{{.Role}}</span></a>
+        <a class="palette-item" href="{{$.Nav.Projects}}#project-{{$i}}-name">{{.Name}}<span class="palette-meta">{{.Role.In $.Lang}}</span></a>
         {{end}}
       </div>
-      <p class="palette-empty" hidden>No matches.</p>
+      <p class="palette-empty" hidden>{{.UI.PaletteNoMatch}}</p>
     </div>
   </div>
 
   <footer class="site-footer">
     <div class="footer-inner">
       <span>© {{.Year}} Barry Prendergast</span>
-      <span>{{.CV.Contact.Location}}</span>
+      <span>{{.CV.Contact.Location.In .Lang}}</span>
     </div>
   </footer>
 </body>

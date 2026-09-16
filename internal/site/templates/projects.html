@@ -1,16 +1,16 @@
 {{define "content"}}
 <section class="page-header">
   <p class="eyebrow" aria-hidden="true">~/projects</p>
-  <h1>Projects</h1>
+  <h1>{{.UI.Projects}}</h1>
 </section>
 
-<cv-filter data-item=".project" data-noun="project">
+<cv-filter data-item=".project" data-noun="{{.UI.FilterProject}}">
   <div class="project-list">
   {{range $i, $project := .CV.Projects}}
   <article class="project" aria-labelledby="project-{{$i}}-name">
     <div class="project-meta">
-      <div>{{.Role}}</div>
-      {{if .Period}}<div class="project-period">{{.Period}}</div>{{end}}
+      <div>{{.Role.In $.Lang}}</div>
+      {{with .Period $.Lang}}<div class="project-period">{{.}}</div>{{end}}
     </div>
     <div class="project-body">
       <h2 id="project-{{$i}}-name">{{.Name}}</h2>
@@ -19,11 +19,11 @@
         {{range .Links}}<li><a href="{{.URL}}">{{.Label}}</a></li>{{end}}
       </ul>
       {{end}}
-      <p class="project-summary">{{.Summary}}</p>
+      <p class="project-summary">{{.Summary.In $.Lang}}</p>
 
-      {{if .Bullets}}
+      {{if .Bullets.In $.Lang}}
       <ul class="project-bullets">
-        {{range .Bullets}}<li>{{.}}</li>{{end}}
+        {{range .Bullets.In $.Lang}}<li>{{.}}</li>{{end}}
       </ul>
       {{end}}
 

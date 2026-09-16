@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"barrypre.com/webcv/internal/cvpdf"
+	"barrypre.com/webcv/internal/data"
 )
 
 // The PDF is generated at build time and committed, so nothing regenerates it
@@ -15,13 +16,46 @@ import (
 // `go generate ./internal/site` before it ships a CV that disagrees with the
 // site it is downloaded from.
 func TestPDFIsCurrent(t *testing.T) {
-	committed, err := staticFS.ReadFile("static/" + cvPDFAsset)
-	if err != nil {
-		t.Fatalf("read the committed PDF: %v", err)
+	// Every language, because a translation edited without regenerating would
+	// otherwise ship a Spanish PDF that disagrees with the Spanish site.
+	for _, lang := range data.Langs {
+		t.Run(string(lang), func(t *testing.T) {
+			asset := cvPDFAssetFor(lang)
+			committed, err := staticFS.ReadFile("static/" + asset)
+			if err != nil {
+				t.Fatalf("read the committed PDF: %v", err)
+			}
+			if !bytes.Equal(committed, cvpdf.Build(lang)) {
+				t.Errorf("static/%s is out of date with internal/data.\n"+
+					"Regenerate it with: go generate ./internal/site", asset)
+			}
+		})
 	}
-	if !bytes.Equal(committed, cvpdf.Build()) {
-		t.Errorf("static/%s is out of date with internal/data.\n"+
-			"Regenerate it with: go generate ./internal/site", cvPDFAsset)
+}
+
+// Each language must be served its own file. Serving one document from both
+// URLs is the failure this catches, and it would otherwise look fine.
+func TestEachLanguageServesItsOwnPDF(t *testing.T) {
+	handler := newTestHandler(t)
+	seen := make(map[string]data.Lang, len(data.Langs))
+
+	for _, lang := range data.Langs {
+		path := cvPDFPathFor(lang)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET %s = %d, want 200", path, rec.Code)
+		}
+
+		body := rec.Body.String()
+		if other, ok := seen[body]; ok {
+			t.Errorf("%s and %s serve identical bytes", other, lang)
+		}
+		seen[body] = lang
+
+		if !bytes.Equal([]byte(body), cvpdf.Build(lang)) {
+			t.Errorf("%s does not serve the %s document", path, lang)
+		}
 	}
 }
 
@@ -102,15 +136,22 @@ func TestCVPDFRejectsNonGET(t *testing.T) {
 func TestPagesLinkToTheCV(t *testing.T) {
 	// The download is worthless if no page offers it. Both entry points that
 	// a visitor plausibly looks at must carry the link.
-	for _, route := range []string{"/", "/contact"} {
-		rec := httptest.NewRecorder()
-		newTestHandler(t).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, route, nil))
-		body := rec.Body.String()
-		if !strings.Contains(body, `href="`+cvPDFPath+`"`) {
-			t.Errorf("%s does not link to %s", route, cvPDFPath)
-		}
-		if !strings.Contains(body, "download") {
-			t.Errorf("%s links to the CV without a download attribute", route)
+	for _, lang := range data.Langs {
+		for _, route := range []string{"/", "/contact"} {
+			path := localPath(lang, route)
+			want := cvPDFPathFor(lang)
+
+			rec := httptest.NewRecorder()
+			newTestHandler(t).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+			body := rec.Body.String()
+			// The language-local PDF, not the English one: a Spanish page that
+			// hands over an English CV is the drift worth catching.
+			if !strings.Contains(body, `href="`+want+`"`) {
+				t.Errorf("%s does not link to %s", path, want)
+			}
+			if !strings.Contains(body, "download") {
+				t.Errorf("%s links to the CV without a download attribute", path)
+			}
 		}
 	}
 }

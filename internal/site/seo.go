@@ -21,9 +21,31 @@ var siteURL = strings.TrimSuffix(data.Me.Contact.Site, "/")
 // said barrypre.com after the site had moved.
 var siteHost = strings.TrimPrefix(strings.TrimPrefix(siteURL, "https://"), "http://")
 
-// canonicalURL turns a route into its absolute form for rel=canonical and og:url.
-func canonicalURL(route string) string {
-	return siteURL + route
+// canonicalURL turns a route into its absolute form for rel=canonical and
+// og:url, in the language it is served in.
+//
+// The English pages keep the bare paths they have always had; Spanish sits
+// under /es. A route of "/" must not produce "/es/" with a trailing slash and
+// "/es" without one, or the two would be separate URLs to a crawler.
+func canonicalURL(lang data.Lang, route string) string {
+	if lang == data.EN {
+		return siteURL + route
+	}
+	if route == "/" {
+		return siteURL + lang.Prefix()
+	}
+	return siteURL + lang.Prefix() + route
+}
+
+// localPath is canonicalURL without the origin — what a link in a page uses.
+func localPath(lang data.Lang, route string) string {
+	if lang == data.EN {
+		return route
+	}
+	if route == "/" {
+		return lang.Prefix()
+	}
+	return lang.Prefix() + route
 }
 
 // personJSONLD renders the schema.org/Person block from the CV values, so the
@@ -31,8 +53,8 @@ func canonicalURL(route string) string {
 //
 // json.Marshal escapes <, > and & to their \u form, so no CV value can close
 // the surrounding <script> element; the result is safe as template.JS.
-func personJSONLD() (template.JS, error) {
-	locality, country, found := strings.Cut(data.Me.Contact.Location, ", ")
+func personJSONLD(lang data.Lang) (template.JS, error) {
+	locality, country, found := strings.Cut(data.Me.Contact.Location.In(lang), ", ")
 	address := map[string]any{"@type": "PostalAddress", "addressLocality": locality}
 	if found {
 		address["addressCountry"] = country
@@ -40,7 +62,7 @@ func personJSONLD() (template.JS, error) {
 
 	var knowsAbout []string
 	for _, group := range data.Me.Skills {
-		knowsAbout = append(knowsAbout, group.Skills...)
+		knowsAbout = append(knowsAbout, group.Skills.In(lang)...)
 	}
 
 	var alumniOf []any
@@ -53,16 +75,17 @@ func personJSONLD() (template.JS, error) {
 
 	var knowsLanguage []string
 	for _, l := range data.Me.Languages {
-		knowsLanguage = append(knowsLanguage, l.Name)
+		knowsLanguage = append(knowsLanguage, l.Name.In(lang))
 	}
 
 	person := map[string]any{
 		"@context":      "https://schema.org",
 		"@type":         "Person",
 		"name":          data.Me.Name,
-		"jobTitle":      data.Me.Headline,
-		"description":   data.Me.Tagline,
-		"url":           siteURL + "/",
+		"jobTitle":      data.Me.Headline.In(lang),
+		"description":   data.Me.Tagline.In(lang),
+		"url":           canonicalURL(lang, "/"),
+		"inLanguage":    lang.Tag(),
 		"email":         "mailto:" + data.Me.Contact.Email,
 		"telephone":     data.Me.Contact.Phone,
 		"address":       address,
@@ -76,11 +99,11 @@ func personJSONLD() (template.JS, error) {
 	// breaks are current entries too, and claiming either as an Organization
 	// would put a company that does not exist into the structured data.
 	for _, job := range data.Me.Jobs {
-		if job.End == "Present" && job.IsEmployment() {
-			person["worksFor"] = map[string]any{"@type": "Organization", "name": job.Company}
+		if job.To.Year == 0 && job.IsEmployment() {
+			person["worksFor"] = map[string]any{"@type": "Organization", "name": job.Company.In(lang)}
 			person["hasOccupation"] = map[string]any{
 				"@type": "Occupation",
-				"name":  job.Title,
+				"name":  job.Title.In(lang),
 			}
 			break
 		}
@@ -99,13 +122,27 @@ func robotsTXT() string {
 	return "User-agent: *\nAllow: /\n\nSitemap: " + siteURL + "/sitemap.xml\n"
 }
 
-// sitemapXML lists the site's four canonical pages.
+// sitemapXML lists every page in every language.
+//
+// Each entry carries xhtml:link alternates naming all of its translations,
+// including itself, which is what the sitemap protocol asks for and what stops
+// a crawler treating the Spanish pages as thin duplicates of the English ones.
 func sitemapXML(routes []string) string {
 	var b strings.Builder
 	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
-	b.WriteString(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + "\n")
-	for _, route := range routes {
-		fmt.Fprintf(&b, "  <url><loc>%s</loc></url>\n", canonicalURL(route))
+	b.WriteString(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"` + "\n")
+	b.WriteString(`        xmlns:xhtml="http://www.w3.org/1999/xhtml">` + "\n")
+	for _, lang := range data.Langs {
+		for _, route := range routes {
+			fmt.Fprintf(&b, "  <url>\n    <loc>%s</loc>\n", canonicalURL(lang, route))
+			for _, alt := range data.Langs {
+				fmt.Fprintf(&b, `    <xhtml:link rel="alternate" hreflang="%s" href="%s"/>`+"\n",
+					alt.Tag(), canonicalURL(alt, route))
+			}
+			fmt.Fprintf(&b, `    <xhtml:link rel="alternate" hreflang="x-default" href="%s"/>`+"\n",
+				canonicalURL(data.EN, route))
+			b.WriteString("  </url>\n")
+		}
 	}
 	b.WriteString("</urlset>\n")
 	return b.String()

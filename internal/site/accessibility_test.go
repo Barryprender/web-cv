@@ -178,15 +178,15 @@ func TestTimelineTogglesAreWiredUp(t *testing.T) {
 	var expected int
 	for i, job := range data.Me.Jobs {
 		want := fmt.Sprintf(`aria-controls="job-%d-details"`, i)
-		if len(job.Bullets) == 0 {
+		if len(job.Bullets.In(data.EN)) == 0 {
 			if strings.Contains(body, want) {
-				t.Errorf("%s has no bullets but rendered a disclosure", job.Company)
+				t.Errorf("%s has no bullets but rendered a disclosure", job.Company.In(data.EN))
 			}
 			continue
 		}
 		expected++
 		if !strings.Contains(body, want) {
-			t.Errorf("missing %s (%s)", want, job.Company)
+			t.Errorf("missing %s (%s)", want, job.Company.In(data.EN))
 		}
 	}
 	if toggles != expected {

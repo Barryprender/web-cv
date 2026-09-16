@@ -134,8 +134,8 @@ func TestExperiencePageRendersEveryJob(t *testing.T) {
 	// silently drop it from the page without failing here.
 	body := rec.Body.String()
 	for _, job := range data.Me.Jobs {
-		if !strings.Contains(body, job.Company) {
-			t.Errorf("experience page is missing %q", job.Company)
+		if !strings.Contains(body, job.Company.In(data.EN)) {
+			t.Errorf("experience page is missing %q", job.Company.In(data.EN))
 		}
 	}
 	if len(data.Me.Jobs) < 8 {

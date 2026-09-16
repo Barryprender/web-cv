@@ -43,6 +43,43 @@ const (
 	cvPDFPath  = "/cv.pdf"
 )
 
+// cvPDFAssetFor and cvPDFPathFor name one language's copy of the download.
+// English keeps the unsuffixed name and URL, which are already in circulation;
+// every other language gets a suffix. Both derive from the same constants, so
+// the embedded file and the public URL cannot disagree about which is which.
+func cvPDFAssetFor(l data.Lang) string {
+	if l == data.EN {
+		return cvPDFAsset
+	}
+	return strings.TrimSuffix(cvPDFAsset, ".pdf") + "-" + string(l) + ".pdf"
+}
+
+func cvPDFPathFor(l data.Lang) string {
+	if l == data.EN {
+		return cvPDFPath
+	}
+	return l.Prefix() + cvPDFPath
+}
+
+// cvPDFFilenameFor is what the browser saves that language's download as.
+func cvPDFFilenameFor(l data.Lang) string {
+	if l == data.EN {
+		return cvPDFFilename
+	}
+	return strings.TrimSuffix(cvPDFFilename, ".pdf") + "-" + strings.ToUpper(string(l)) + ".pdf"
+}
+
+// alternatesFor lists every language's URL for one route, plus x-default
+// pointing at English. Each page names all of them, itself included, which is
+// what hreflang requires to be treated as a reciprocal set.
+func alternatesFor(route string) []alternate {
+	out := make([]alternate, 0, len(data.Langs)+1)
+	for _, l := range data.Langs {
+		out = append(out, alternate{Tag: l.Tag(), Href: canonicalURL(l, route)})
+	}
+	return append(out, alternate{Tag: "x-default", Href: canonicalURL(data.EN, route)})
+}
+
 // cvPDFFilename is what a browser saves the download as. It is derived from the
 // CV data so it cannot drift from the name on the document itself.
 //
@@ -78,12 +115,73 @@ type pageData struct {
 	Canonical   string
 	Active      string
 	Year        int
+	// Lang is the language this render is in, for the html lang attribute and
+	// for building links that stay inside it.
+	Lang data.Lang
+	// Tag and OGLocale are Lang in the forms the markup needs.
+	Tag      string
+	OGLocale string
+	// Alternates are every language's URL for this same page, including this
+	// one, for the hreflang links.
+	Alternates []alternate
+	// Switch is the other language's URL for this page, for the nav switcher.
+	Switch     string
+	SwitchLang string
+	// Nav holds this language's version of each route, so links in the page
+	// do not drop the visitor back into English.
+	Nav navLinks
+	// UI is every interface string already resolved into this language.
+	UI uiText
 	// JSONLD is the schema.org/Person block, identical on every page.
 	JSONLD template.JS
 	// Status is the no-JS contact form result read back off the query string
 	// after the POST redirect: "sent", "error", or "" for a normal visit.
 	Status string
 	CV     any
+}
+
+// alternate is one hreflang link.
+type alternate struct {
+	Tag  string
+	Href string
+}
+
+// navLinks holds the language-local URL of every page the templates link to.
+type navLinks struct {
+	Home       string
+	Experience string
+	Projects   string
+	Skills     string
+	Contact    string
+	CV         string
+}
+
+// navFor builds the link set for one language.
+func navFor(l data.Lang) navLinks {
+	return navLinks{
+		Home:       localPath(l, "/"),
+		Experience: localPath(l, "/experience"),
+		Projects:   localPath(l, "/projects"),
+		Skills:     localPath(l, "/skills"),
+		Contact:    localPath(l, "/contact"),
+		CV:         cvPDFPathFor(l),
+	}
+}
+
+// langOf reads the language prefix back off a request path, returning the
+// empty prefix for English. It is used on the contact POST, which is the one
+// request whose response has to know which language page it came from.
+//
+// The path is matched against the known prefixes rather than parsed, so an
+// unrecognised first segment cannot become part of a redirect target.
+func langOf(path string) string {
+	for _, l := range data.Langs {
+		p := l.Prefix()
+		if p != "" && (path == p || strings.HasPrefix(path, p+"/")) {
+			return p
+		}
+	}
+	return ""
 }
 
 // formStatus whitelists the ?status= value that the contact POST redirects
@@ -98,21 +196,14 @@ func formStatus(r *http.Request) string {
 }
 
 var pages = map[string]struct {
-	path        string
-	title       string
-	active      string
-	description string
+	path   string
+	active string
 }{
-	"/": {"home.html", "Barry Prendergast — Senior Full-Stack Engineer", "home",
-		"Barry Prendergast, Senior Full-Stack Engineer in Madrid. Fifteen years of Angular at enterprise scale, now architecting security-first platforms in Go."},
-	"/experience": {"experience.html", "Experience — Barry Prendergast", "experience",
-		"Eight roles across banking, media and medical platforms, from jQuery layouts at Vocento to principal frontend architect at Quality Compusoft."},
-	"/projects": {"projects.html", "Projects — Barry Prendergast", "projects",
-		"Selected work: SAUI, a server-authoritative web architecture in Go and htmx, and a GDPR-compliant medical-device ordering portal for Archway Orthotics."},
-	"/skills": {"skills.html", "Skills — Barry Prendergast", "skills",
-		"Angular v1–20, TypeScript, RxJS and Web Components on the front end; Go, SQLite and OWASP Top 10 security practice on the back."},
-	"/contact": {"contact.html", "Contact — Barry Prendergast", "contact",
-		"Email, phone and LinkedIn for Barry Prendergast, or send a message straight from the page. Based in Madrid, Spain."},
+	"/":           {"home.html", "home"},
+	"/experience": {"experience.html", "experience"},
+	"/projects":   {"projects.html", "projects"},
+	"/skills":     {"skills.html", "skills"},
+	"/contact":    {"contact.html", "contact"},
 }
 
 // routes returns every page path, sorted, for the sitemap.
@@ -145,39 +236,73 @@ func NewHandler(year int, sender mail.Sender) http.Handler {
 		panic(err) // embedded FS, cannot fail at runtime
 	}
 
-	jsonLD, err := personJSONLD()
-	if err != nil {
-		panic(err) // built from static CV values, cannot fail at runtime
+	jsonLD := make(map[data.Lang]template.JS, len(data.Langs))
+	for _, lang := range data.Langs {
+		block, err := personJSONLD(lang)
+		if err != nil {
+			panic(err) // built from static CV values, cannot fail at runtime
+		}
+		jsonLD[lang] = block
 	}
 
 	// Templates resolve asset URLs through the static handler so every
 	// reference carries the current content hash.
-	funcs := template.FuncMap{"asset": static.assetURL}
+	funcs := template.FuncMap{"asset": static.assetURL, "Range": data.Range}
 
 	for route, p := range pages {
 		tmpl := template.Must(template.New(p.path).Funcs(funcs).
 			ParseFS(templatesFS, "templates/layout.html", "templates/"+p.path))
-		pattern := route
-		if pattern == "/" {
-			pattern = "/{$}" // exact match only — otherwise "/" is a subtree wildcard matching every path
-		}
-		canonical := canonicalURL(route)
-		mux.HandleFunc("GET "+pattern, func(w http.ResponseWriter, r *http.Request) {
-			d := pageData{
-				Title:       p.title,
-				Description: p.description,
-				Canonical:   canonical,
+
+		meta := pageMeta[route]
+
+		for _, lang := range data.Langs {
+			// Everything that does not depend on the request is resolved here,
+			// once at startup, rather than per visit.
+			base := pageData{
+				Title:       meta.Title.In(lang),
+				Description: meta.Description.In(lang),
+				Canonical:   canonicalURL(lang, route),
 				Active:      p.active,
 				Year:        year,
-				JSONLD:      jsonLD,
-				Status:      formStatus(r),
+				Lang:        lang,
+				Tag:         lang.Tag(),
+				OGLocale:    lang.OGLocale(),
+				Alternates:  alternatesFor(route),
+				Switch:      localPath(otherLang(lang), route),
+				SwitchLang:  string(otherLang(lang)),
+				Nav:         navFor(lang),
+				UI:          textFor(lang),
+				JSONLD:      jsonLD[lang],
 				CV:          data.Me,
 			}
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			if err := tmpl.ExecuteTemplate(w, "layout", d); err != nil {
-				log.Printf("render %s: %v", route, err)
-				http.Error(w, "internal error", http.StatusInternalServerError)
+
+			// A pattern ending in "/" is a subtree wildcard in this mux, so
+			// the English root is pinned with {$}. Every other path, including
+			// "/es", is already an exact match and must not gain a slash.
+			pattern := localPath(lang, route)
+			if route == "/" && lang == data.EN {
+				pattern = "/{$}"
 			}
+
+			mux.HandleFunc("GET "+pattern, func(w http.ResponseWriter, r *http.Request) {
+				d := base
+				d.Status = formStatus(r)
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				if err := tmpl.ExecuteTemplate(w, "layout", d); err != nil {
+					log.Printf("render %s %s: %v", lang, route, err)
+					http.Error(w, "internal error", http.StatusInternalServerError)
+				}
+			})
+		}
+	}
+
+	for _, lang := range data.Langs {
+		if lang == data.EN {
+			continue
+		}
+		canonical := lang.Prefix()
+		mux.HandleFunc("GET "+canonical+"/{$}", func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, canonical, http.StatusMovedPermanently)
 		})
 	}
 
@@ -201,12 +326,15 @@ func NewHandler(year int, sender mail.Sender) http.Handler {
 	// in the browser's viewer for someone who only wants a look, while the
 	// download attribute on the link still saves it under the filename below
 	// for someone who wants the file.
-	mux.HandleFunc("GET "+cvPDFPath, func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Disposition", `inline; filename="`+cvPDFFilename+`"`)
-		r2 := r.Clone(r.Context())
-		r2.URL.Path = staticPrefix + cvPDFAsset
-		static.ServeHTTP(w, r2)
-	})
+	for _, lang := range data.Langs {
+		asset, filename := cvPDFAssetFor(lang), cvPDFFilenameFor(lang)
+		mux.HandleFunc("GET "+cvPDFPathFor(lang), func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Disposition", `inline; filename="`+filename+`"`)
+			r2 := r.Clone(r.Context())
+			r2.URL.Path = staticPrefix + asset
+			static.ServeHTTP(w, r2)
+		})
+	}
 
 	// Liveness probe for the platform's health checks. Deliberately does no
 	// work beyond answering: it says the process is up and serving, which is
@@ -236,7 +364,9 @@ func NewHandler(year int, sender mail.Sender) http.Handler {
 		respondContact(w, r, http.StatusTooManyRequests,
 			fmt.Sprintf("Too many messages just now. Wait %d seconds and try again.", int(retryAfter.Seconds())))
 	}
-	mux.Handle("POST /contact", limiter.limit(contactHandler(sender)))
+	for _, lang := range data.Langs {
+		mux.Handle("POST "+localPath(lang, "/contact"), limiter.limit(contactHandler(sender)))
+	}
 
 	// Reject non-safe cross-origin browser requests before they reach any
 	// handler. GET/HEAD/OPTIONS are left alone, which is sound here because no
@@ -446,5 +576,9 @@ func respondContact(w http.ResponseWriter, r *http.Request, code int, errMsg str
 	// no-JS fallback: POST-redirect-GET back to the contact page. The fragment
 	// points at the rendered status message so the browser scrolls to it —
 	// without it the result was invisible to anyone not running JS.
-	http.Redirect(w, r, "/contact?status="+contactStatus(code)+"#form-status", http.StatusSeeOther)
+	// Back to the contact page in the language the form was posted from, not
+	// always the English one: a Spanish visitor who submits the form must not
+	// be dropped into English to read the result.
+	http.Redirect(w, r, langOf(r.URL.Path)+"/contact?status="+contactStatus(code)+"#form-status",
+		http.StatusSeeOther)
 }

@@ -18,8 +18,11 @@ but Go itself, and no JavaScript, CSS or font is fetched from a third party.
 - **Fonts**: Public Sans, Newsreader and JetBrains Mono, self-hosted as
   subsetted woff2 files under `internal/site/static/fonts`. Nothing is
   requested from a font CDN.
-- **Content**: `internal/data/cv.go` is the single source of truth. Templates
-  render from it — edit the Go values, not the HTML, to update the CV.
+- **Content**: `internal/data/cv.go` is the single source of truth, in English
+  and Spanish. Templates render from it — edit the Go values, not the HTML, to
+  update the CV.
+- **Languages**: English at the root, Spanish under `/es`, with hreflang
+  alternates and a PDF each. See [Languages](#languages) below.
 - **Email**: `internal/mail` sends contact form submissions through Resend or
   Postmark (or both, with failover) over plain `net/http` — no SDK, no
   dependency.
@@ -55,9 +58,9 @@ Edit `internal/data/cv.go`, then regenerate the PDF:
 go generate ./internal/site
 ```
 
-`TestPDFIsCurrent` fails if the committed `internal/site/static/cv.pdf` has
-fallen behind the data, so a forgotten regeneration shows up in `go test ./...`
-rather than shipping a PDF that disagrees with the site.
+One run writes both languages. `TestPDFIsCurrent` fails if either committed PDF
+has fallen behind the data, so a forgotten regeneration shows up in
+`go test ./...` rather than shipping a PDF that disagrees with the site.
 
 ## Contact form delivery
 
@@ -92,12 +95,51 @@ header.
 with a capped tracking map, so neither the endpoint nor the inbox behind it can
 be flooded by a single client.
 
+## Languages
+
+The site publishes in English and Spanish. English keeps the bare paths it has
+always had (`/experience`), Spanish sits under a prefix (`/es/experience`), so
+adding the translation moved no URL that was already in circulation.
+
+Both languages live in the same literal. `internal/data/lang.go` defines `T`,
+which holds one piece of copy in both:
+
+```go
+Title: T{
+    EN: "Senior Frontend Developer",
+    ES: "Desarrollador Frontend Senior",
+},
+```
+
+That adjacency is the point. A role cannot be added, or its wording changed,
+without the other language being visible in the same edit — two parallel files
+drift the first time someone is in a hurry. A missing Spanish string falls back
+to English rather than rendering an empty element.
+
+Dates are stored as numbers (`Date{Year: 2020, Month: 9}`) and written out per
+language, so "September 2020" and "septiembre de 2020" come from one value
+instead of two translated strings that can disagree.
+
+`internal/site/ui.go` holds the interface strings — navigation, buttons, form
+labels, status messages. They are resolved into plain strings once at startup,
+so a template writes `{{.UI.NavHome}}` and a typo fails to render rather than
+quietly producing an empty element.
+
+Each language gets its own PDF: `/cv.pdf` and `/es/cv.pdf`, generated together
+by one `go generate`. `TestPDFIsCurrent` checks both against the data.
+
+Known simplification: the Spanish URLs keep the English slugs (`/es/experience`,
+not `/es/experiencia`). Translating them means a route table mapping slugs per
+language, which is worth doing if the Spanish pages ever need to rank on their
+own terms.
+
 ## Structure
 
 ```
 cmd/server/main.go         entrypoint, graceful shutdown
-cmd/pdfgen/main.go         writes internal/site/static/cv.pdf from the CV data
-internal/data/cv.go        CV content (edit this to update the site)
+cmd/pdfgen/main.go         writes cv.pdf and cv-es.pdf from the CV data
+internal/data/cv.go        CV content, English and Spanish (edit this)
+internal/data/lang.go      the T/TS/Date types the bilingual content uses
 internal/mail/             Resend + Postmark senders, failover chain, env config
 internal/pdf/              minimal stdlib PDF writer (no dependencies)
 internal/cvpdf/            CV page layout, built on internal/pdf
@@ -106,14 +148,16 @@ internal/site/security.go  CSP and the rest of the security headers
 internal/site/static.go    embedded asset handler: ETags, content types, 304s
 internal/site/ratelimit.go per-IP token bucket for POST /contact
 internal/site/seo.go       canonical URLs, JSON-LD, robots.txt, sitemap.xml
+internal/site/ui.go        interface strings and page titles, per language
 internal/site/email.go     HTML + text rendering of a contact message
 internal/site/templates/   html/template files (layout + one per page)
 internal/site/static/      css + js + fonts + icons + cv.pdf, all embedded
 ```
 
-Beyond the content pages, the server answers `GET /cv.pdf`, `GET /robots.txt`,
-`GET /sitemap.xml`, `GET /healthz`, `GET /favicon.ico`, `GET /static/…` and
-`POST /contact`.
+Beyond the content pages in both languages, the server answers `GET /cv.pdf`,
+`GET /es/cv.pdf`, `GET /robots.txt`, `GET /sitemap.xml`, `GET /healthz`,
+`GET /favicon.ico`, `GET /static/…`, and `POST /contact` under each language
+prefix.
 
 ## Security headers
 
@@ -172,7 +216,13 @@ for free; the PDF is what a recruiter reads in half a minute, so it holds two
 pages. Every employer still appears — only the detail is cut, so nothing on the
 site is silently missing from the PDF. The editorial limits are the constants
 at the top of `internal/cvpdf/cvpdf.go`, and `TestFitsTwoPages` fails if added
-copy pushes the document to a third page.
+copy pushes either language to a third page.
+
+Both languages print the same achievements. Spanish runs about a fifth longer
+for the same meaning, so it is set slightly tighter (`metricsFor`) rather than
+given fewer bullets: half a point of body size is invisible to a reader who
+only ever sees one document, and a CV that silently says less in their language
+is not.
 
 Set in Helvetica rather than the site's Public Sans: embedding a real typeface
 would mean parsing woff2 (Brotli) and subsetting TrueType, neither of which is
@@ -221,7 +271,7 @@ The Go version is pinned in three places — `go.mod`, `Dockerfile` and
 because `govulncheck` reports 22 reachable standard-library vulnerabilities
 below it.
 
-Coverage is 94.7% of statements across `./internal/...`, measured the way CI
+Coverage is 95.0% of statements across `./internal/...`, measured the way CI
 measures it:
 
 ```

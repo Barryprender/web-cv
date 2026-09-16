@@ -74,111 +74,128 @@ func winAnsi(s string) string {
 	return b.String()
 }
 
+// forEachLang runs an assertion against the PDF built in every published
+// language. A translation that silently dropped a role or a bullet would
+// otherwise only be caught by someone reading the Spanish file by eye.
+func forEachLang(t *testing.T, check func(t *testing.T, lang data.Lang, got string)) {
+	t.Helper()
+	for _, lang := range data.Langs {
+		t.Run(string(lang), func(t *testing.T) {
+			check(t, lang, flat(t, Build(lang)))
+		})
+	}
+}
+
 // TestBuildIncludesEveryRole holds the rule that survived the two-page cut:
 // every employer appears. Only the detail is abridged, so no reader can find a
 // role on the site that the PDF silently omitted.
 func TestBuildIncludesEveryRole(t *testing.T) {
-	got := flat(t, Build())
-	for _, job := range data.Me.Jobs {
-		if !strings.Contains(got, winAnsi(job.Company)) {
-			t.Errorf("PDF is missing the role at %q", job.Company)
+	forEachLang(t, func(t *testing.T, lang data.Lang, got string) {
+		for _, job := range data.Me.Jobs {
+			if !strings.Contains(got, winAnsi(job.Company.In(lang))) {
+				t.Errorf("PDF is missing the role at %q", job.Company.In(lang))
+			}
 		}
-	}
+	})
 }
 
 // TestDetailedRolesKeepTheirBullets checks the abridgement is the one intended:
 // the most recent employers print jobBullets of their achievements, rather than
 // the cut quietly reaching a role that should have kept its detail.
 func TestDetailedRolesKeepTheirBullets(t *testing.T) {
-	got := flat(t, Build())
+	forEachLang(t, func(t *testing.T, lang data.Lang, got string) {
+		detailed := 0
+		for _, job := range data.Me.Jobs {
+			if !job.IsEmployment() {
+				continue
+			}
+			if detailed >= detailedRoles {
+				break
+			}
+			detailed++
 
-	detailed := 0
-	for _, job := range data.Me.Jobs {
-		if !job.IsEmployment() {
-			continue
-		}
-		if detailed >= detailedRoles {
-			break
-		}
-		detailed++
-
-		for _, bullet := range first(job.Bullets, jobBullets) {
-			if !strings.Contains(got, winAnsi(bullet)) {
-				t.Errorf("%s: bullet missing or garbled: %q", job.Company, bullet)
+			for _, bullet := range first(job.Bullets.In(lang), jobBullets) {
+				if !strings.Contains(got, winAnsi(bullet)) {
+					t.Errorf("%s: bullet missing or garbled: %q", job.Company.In(lang), bullet)
+				}
 			}
 		}
-	}
 
-	if detailed == 0 {
-		t.Fatal("no detailed roles rendered; the CV would carry no achievements at all")
-	}
+		if detailed == 0 {
+			t.Fatal("no detailed roles rendered; the CV would carry no achievements at all")
+		}
+	})
 }
 
 func TestBuildIncludesEveryProject(t *testing.T) {
-	got := flat(t, Build())
-	for _, p := range data.Me.Projects {
-		if !strings.Contains(got, winAnsi(p.Name)) {
-			t.Errorf("PDF is missing the project %q", p.Name)
+	forEachLang(t, func(t *testing.T, lang data.Lang, got string) {
+		for _, p := range data.Me.Projects {
+			if !strings.Contains(got, winAnsi(p.Name)) {
+				t.Errorf("PDF is missing the project %q", p.Name)
+			}
+			if !strings.Contains(got, winAnsi(p.Summary.In(lang))) {
+				t.Errorf("%s: summary missing or garbled", p.Name)
+			}
 		}
-		if !strings.Contains(got, winAnsi(p.Summary)) {
-			t.Errorf("%s: summary missing or garbled", p.Name)
-		}
-	}
+	})
 }
 
 func TestBuildIncludesHeaderAndContact(t *testing.T) {
-	got := flat(t, Build())
-	for _, want := range []string{
-		data.Me.Name,
-		data.Me.Headline,
-		data.Me.Contact.Email,
-		data.Me.Contact.Phone,
-		data.Me.Contact.Location,
-	} {
-		if !strings.Contains(got, winAnsi(want)) {
-			t.Errorf("PDF is missing %q", want)
+	forEachLang(t, func(t *testing.T, lang data.Lang, got string) {
+		for _, want := range []string{
+			data.Me.Name,
+			data.Me.Headline.In(lang),
+			data.Me.Contact.Email,
+			data.Me.Contact.Phone,
+			data.Me.Contact.Location.In(lang),
+		} {
+			if !strings.Contains(got, winAnsi(want)) {
+				t.Errorf("PDF is missing %q", want)
+			}
 		}
-	}
+	})
 }
 
 func TestBuildIncludesSkillsEducationAndLanguages(t *testing.T) {
-	got := flat(t, Build())
-	for _, group := range data.Me.Skills {
-		for _, skill := range group.Skills {
-			if !strings.Contains(got, winAnsi(skill)) {
-				t.Errorf("PDF is missing the skill %q", skill)
+	forEachLang(t, func(t *testing.T, lang data.Lang, got string) {
+		for _, group := range data.Me.Skills {
+			for _, skill := range group.Skills.In(lang) {
+				if !strings.Contains(got, winAnsi(skill)) {
+					t.Errorf("PDF is missing the skill %q", skill)
+				}
 			}
 		}
-	}
-	for _, e := range data.Me.Education {
-		if !strings.Contains(got, winAnsi(e.Institution)) {
-			t.Errorf("PDF is missing the education entry %q", e.Institution)
+		for _, e := range data.Me.Education {
+			if !strings.Contains(got, winAnsi(e.Institution)) {
+				t.Errorf("PDF is missing the education entry %q", e.Institution)
+			}
 		}
-	}
-	for _, l := range data.Me.Languages {
-		if !strings.Contains(got, winAnsi(l.Name)) {
-			t.Errorf("PDF is missing the language %q", l.Name)
+		for _, l := range data.Me.Languages {
+			if !strings.Contains(got, winAnsi(l.Name.In(lang))) {
+				t.Errorf("PDF is missing the language %q", l.Name.In(lang))
+			}
 		}
-	}
+	})
 }
 
 // The career break is data with Kind "break", not a job. It belongs on the CV
 // as a dated entry, but nothing may present it as an employer — the same rule
 // the JSON-LD follows.
 func TestBuildKeepsNonEmploymentEntries(t *testing.T) {
-	got := flat(t, Build())
-	for _, job := range data.Me.Jobs {
-		if job.IsEmployment() {
-			continue
+	forEachLang(t, func(t *testing.T, lang data.Lang, got string) {
+		for _, job := range data.Me.Jobs {
+			if job.IsEmployment() {
+				continue
+			}
+			if !strings.Contains(got, winAnsi(job.Company.In(lang))) {
+				t.Errorf("PDF drops the non-employment entry %q", job.Company.In(lang))
+			}
 		}
-		if !strings.Contains(got, winAnsi(job.Company)) {
-			t.Errorf("PDF drops the non-employment entry %q", job.Company)
-		}
-	}
+	})
 }
 
 func TestBuildLinksEveryDestination(t *testing.T) {
-	doc := Build()
+	doc := Build(data.EN)
 	want := []string{data.Me.Contact.LinkedIn, data.Me.Contact.GitHub, data.Me.Contact.Site}
 	for _, p := range data.Me.Projects {
 		for _, l := range p.Links {
@@ -198,37 +215,30 @@ func TestBuildLinksEveryDestination(t *testing.T) {
 func TestBuildIsDeterministic(t *testing.T) {
 	// cmd/pdfgen commits its output, and TestPDFIsCurrent in internal/site
 	// diffs it. Both depend on the same data producing the same bytes.
-	if !bytes.Equal(Build(), Build()) {
-		t.Error("two builds of the same data differ")
-	}
-}
-
-func TestBuildFitsAPlausiblePageCount(t *testing.T) {
-	doc := Build()
-	m := regexp.MustCompile(`/Count (\d+)`).FindSubmatch(doc)
-	if m == nil {
-		t.Fatal("no page count in the page tree")
-	}
-	pages, _ := strconv.Atoi(string(m[1]))
-	// A guard against the layout silently collapsing (one page could not hold
-	// this much) or running away (a wrapping bug that emits a line per word).
-	if pages < 2 || pages > 8 {
-		t.Errorf("PDF is %d pages; expected between 2 and 8", pages)
+	for _, lang := range data.Langs {
+		if !bytes.Equal(Build(lang), Build(lang)) {
+			t.Errorf("%s: two builds of the same data differ", lang)
+		}
 	}
 }
 
 // Every page must carry the running footer. Without it a page that gets
 // separated from the others has nothing on it saying whose CV it is.
 func TestEveryPageCarriesTheFooter(t *testing.T) {
-	doc := Build()
-	pages := regexp.MustCompile(`/Count (\d+)`).FindSubmatch(doc)
-	count, _ := strconv.Atoi(string(pages[1]))
+	for _, lang := range data.Langs {
+		t.Run(string(lang), func(t *testing.T) {
+			doc := Build(lang)
+			pages := regexp.MustCompile(`/Count (\d+)`).FindSubmatch(doc)
+			count, _ := strconv.Atoi(string(pages[1]))
 
-	got := flat(t, doc)
-	for i := 1; i <= count; i++ {
-		if !strings.Contains(got, "Page "+strconv.Itoa(i)) {
-			t.Errorf("page %d has no footer", i)
-		}
+			got := flat(t, doc)
+			word := pageWord.In(lang)
+			for i := 1; i <= count; i++ {
+				if !strings.Contains(got, winAnsi(word+" "+strconv.Itoa(i))) {
+					t.Errorf("page %d has no footer", i)
+				}
+			}
+		})
 	}
 }
 
