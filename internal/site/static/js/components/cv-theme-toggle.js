@@ -2,15 +2,11 @@
 // Default (no attribute) follows the OS via prefers-color-scheme, styled
 // in CSS. The choice is remembered per browser in localStorage; failures
 // there (private mode, disabled storage) just fall back to in-memory only.
+//
+// Reading the stored value back is not done here. This module is deferred, so
+// applying it on connect painted a light frame first; ../theme.js does it in
+// <head> before the first paint instead. This file only writes.
 const STORAGE_KEY = 'cv-theme';
- 
-function readStored() {
-  try {
-    return localStorage.getItem(STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
  
 function writeStored(value) {
   try {
@@ -23,11 +19,6 @@ function writeStored(value) {
  
 class CvThemeToggle extends HTMLElement {
   connectedCallback() {
-    const stored = readStored();
-    if (stored === 'light' || stored === 'dark') {
-      document.documentElement.setAttribute('data-theme', stored);
-    }
- 
     this.innerHTML = '';
     const btn = document.createElement('button');
     btn.className = 'nav-toggle-btn';

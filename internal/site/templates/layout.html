@@ -27,6 +27,12 @@
   <link rel="icon" href="{{asset "favicon-32.png"}}" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="{{asset "apple-touch-icon.png"}}">
 
+  {{/* Blocking, classic, and above the stylesheet on purpose: it sets
+       data-theme from storage before the first paint, so a visitor who chose
+       dark on a light OS never sees a light frame. js/theme.js says why the
+       usual deferred module will not do. */}}
+  <script src="{{asset "js/theme.js"}}"></script>
+
   <link rel="stylesheet" href="{{asset "css/style.css"}}">
   <script type="module" src="{{asset "js/main.js"}}"></script>
 
