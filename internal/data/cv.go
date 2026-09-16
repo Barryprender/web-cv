@@ -121,8 +121,8 @@ var Me = struct {
 		ES: "Ingeniero Full-Stack Senior",
 	},
 	Tagline: T{
-		EN: "Fifteen years of Angular at enterprise scale. Now building security-first platforms in Go.",
-		ES: "Quince años de Angular a escala empresarial. Ahora construyo plataformas centradas en la seguridad con Go.",
+		EN: "Fifteen years of Angular at enterprise scale. Now directing AI agents to build security-first Go backends.",
+		ES: "Quince años de Angular a escala empresarial. Ahora dirijo agentes de IA para construir backends en Go seguros.",
 	},
 	Status: T{
 		EN: "building saui and secure-ui-components · shipped the archway orthotics portal",
@@ -147,19 +147,19 @@ var Me = struct {
 		{
 			Company: T{EN: "Independent", ES: "Independiente"},
 			Title: T{
-				EN: "Open source, client engagements and cybersecurity training",
-				ES: "Código abierto, proyectos para clientes y formación en ciberseguridad",
+				EN: "Frontend architecture and AI-directed delivery of secure Go backends",
+				ES: "Arquitectura frontend y desarrollo de backends Go seguros dirigido con IA",
 			},
 			Kind:     "independent",
 			From:     Date{Year: 2026, Month: 3},
 			Location: T{EN: "Madrid", ES: "Madrid"},
 			Bullets: TS{
 				EN: []string{
-					"Built and published Secure UI Components and SAUI, and delivered the Archway Orthotics practitioner portal as a client engagement (see Projects)",
+					"Set the constraints, directed AI agents through implementation, and own the result: Secure UI Components, SAUI and the Archway Orthotics portal (see Projects)",
 					"Completed the Advanced Cybersecurity & Cyber Intelligence diploma at CADEL, covering penetration testing methodology, SOC analysis, and the Kali Linux, Burp Suite, OWASP ZAP, SQLMap and Metasploit toolchain",
 				},
 				ES: []string{
-					"Desarrollé y publiqué Secure UI Components y SAUI, y entregué el portal para profesionales de Archway Orthotics como proyecto para cliente (ver Proyectos)",
+					"Fijé las restricciones, dirigí a los agentes en la implementación y asumo el resultado: Secure UI Components, SAUI y el portal de Archway Orthotics (ver Proyectos)",
 					"Completé el diploma en Ciberseguridad Avanzada e Inteligencia Cibernética en CADEL, que abarca metodología de test de intrusión, análisis SOC y las herramientas Kali Linux, Burp Suite, OWASP ZAP, SQLMap y Metasploit",
 				},
 			},
@@ -358,15 +358,15 @@ var Me = struct {
 			},
 			Bullets: TS{
 				EN: []string{
-					"Designed and built a zero-runtime-dependency TypeScript Web Components library covering OWASP Top 10:2021 (A01–A10) with security active by default: CSRF protection, XSS sanitisation, audit logging, and closed Shadow DOM isolation, none of it requiring developer configuration",
-					"Built <secure-telemetry-provider>: CAPTCHA-free bot detection using HMAC-SHA-256 signed behavioural signal envelopes (webdriver flag, headless detection, mouse/keyboard presence, submit timing, screen dimensions). Signals are verified server-side, and the data never leaves the developer's infrastructure",
+					"Designed a zero-runtime-dependency TypeScript Web Components library covering OWASP Top 10:2021 (A01–A10) with security active by default: CSRF protection, XSS sanitisation, audit logging, and closed Shadow DOM isolation, none of it requiring developer configuration",
+					"Specified <secure-telemetry-provider>: CAPTCHA-free bot detection using HMAC-SHA-256 signed behavioural signal envelopes (webdriver flag, headless detection, mouse/keyboard presence, submit timing, screen dimensions). Signals are verified server-side, and the data never leaves the developer's infrastructure",
 					"9 production-ready components published to npm: secure-form, secure-input, secure-select, secure-textarea, secure-file-upload, secure-datetime, secure-table, secure-card, secure-telemetry-provider",
 					"Framework-agnostic via the W3C Custom Elements standard: works in Angular, React, Vue, Svelte, Go/templ, Django, Rails, and plain HTML with a single script tag",
 					"Shipped the showcase site itself on the Go standard library, SQLite, templ, and native HTML/CSS/TypeScript, deployed to Fly.io with full i18n (EN/ES/FR/DE)",
 				},
 				ES: []string{
-					"Diseñé y construí una biblioteca de Web Components en TypeScript sin dependencias en tiempo de ejecución que cubre el OWASP Top 10:2021 (A01–A10) con la seguridad activa por defecto: protección CSRF, saneamiento XSS, registro de auditoría y aislamiento con Shadow DOM cerrado, sin que nada de ello requiera configuración por parte del desarrollador",
-					"Construí <secure-telemetry-provider>: detección de bots sin CAPTCHA mediante sobres de señales de comportamiento firmados con HMAC-SHA-256 (indicador webdriver, detección de navegador headless, presencia de ratón y teclado, tiempo de envío, dimensiones de pantalla). Las señales se verifican en el servidor y los datos nunca salen de la infraestructura del desarrollador",
+					"Diseñé una biblioteca de Web Components en TypeScript sin dependencias en tiempo de ejecución que cubre el OWASP Top 10:2021 (A01–A10) con la seguridad activa por defecto: protección CSRF, saneamiento XSS, registro de auditoría y aislamiento con Shadow DOM cerrado, sin que nada de ello requiera configuración por parte del desarrollador",
+					"Especifiqué <secure-telemetry-provider>: detección de bots sin CAPTCHA mediante sobres de señales de comportamiento firmados con HMAC-SHA-256 (indicador webdriver, detección de navegador headless, presencia de ratón y teclado, tiempo de envío, dimensiones de pantalla). Las señales se verifican en el servidor y los datos nunca salen de la infraestructura del desarrollador",
 					"9 componentes listos para producción publicados en npm: secure-form, secure-input, secure-select, secure-textarea, secure-file-upload, secure-datetime, secure-table, secure-card, secure-telemetry-provider",
 					"Independiente de frameworks gracias al estándar W3C Custom Elements: funciona en Angular, React, Vue, Svelte, Go/templ, Django, Rails y HTML puro con una sola etiqueta script",
 					"Publiqué el propio sitio de demostración sobre la biblioteca estándar de Go, SQLite, templ y HTML, CSS y TypeScript nativos, desplegado en Fly.io con internacionalización completa (EN/ES/FR/DE)",
@@ -385,13 +385,13 @@ var Me = struct {
 			Bullets: TS{
 				EN: []string{
 					"Wrote and published the architecture: the gateway contract, the two-layer state model, and the action pattern. The argument is that a UI displaying server state is correct by definition, while one holding its own copy is eventually wrong",
-					"Built the reference implementation in Go, SQLite and htmx: no client-side state management, no build step, no framework",
+					"Specified the reference implementation, built by agents to my constraints: Go, SQLite and htmx, no client state, no build step, no framework",
 					"Eight-part site (why, architecture, stack, cases, testing, limits, code, blog) shipped in English and Spanish, deployed on Fly.io",
 					"Documents where the approach is the wrong choice as plainly as where it fits",
 				},
 				ES: []string{
 					"Escribí y publiqué la arquitectura: el contrato de la pasarela, el modelo de estado en dos capas y el patrón de acciones. El argumento es que una interfaz que muestra el estado del servidor es correcta por definición, mientras que una que guarda su propia copia acaba estando equivocada",
-					"Construí la implementación de referencia en Go, SQLite y htmx: sin gestión de estado en el cliente, sin paso de compilación y sin framework",
+					"Especifiqué la implementación de referencia, construida por agentes según mis restricciones: Go, SQLite y htmx, sin estado en cliente, sin compilación ni framework",
 					"Sitio de ocho secciones (por qué, arquitectura, stack, casos, pruebas, límites, código y blog) publicado en inglés y español, desplegado en Fly.io",
 					"Documenta con la misma claridad dónde el enfoque es la elección equivocada y dónde encaja",
 				},
@@ -414,16 +414,16 @@ var Me = struct {
 				EN: []string{
 					"Replaced an email/Dropbox process with a structured portal: practitioners register patients and submit a digital prescription with a 3D foot scan, and the lab moves orders through a manufacturing pipeline and pulls scans for CAD/CAM milling",
 					"Handled patient data to GDPR: AES-256-GCM encryption of scan files at rest, per-tenant isolation, CSRF protection, audit logging, fail-closed configuration, and lifecycle handling for storage limitation (Art. 5(1)(e)), erasure (Art. 17) and subject access and portability (Art. 15/20)",
-					"Wrote the compliance pack alongside the code: DPIA, records of processing, retention schedule, breach procedure and privacy notice",
+					"Scoped and reviewed the compliance pack alongside the code: DPIA, records of processing, retention schedule, breach procedure and privacy notice",
 					"Strict CSP with no inline scripts or styles; semantic HTML with vanilla JS only for progressive enhancement, plus a self-hosted Three.js viewer for admin scan preview",
-					"Around 9,700 lines of Go across 62 files and 13 templ components over 496 commits, on SQLite through a pure-Go driver (no CGO) and deployed to Fly.io",
+					"Agent-built under my review: around 9,700 lines of Go across 62 files and 13 templ components, on SQLite through a pure-Go driver (no CGO), deployed to Fly.io",
 				},
 				ES: []string{
 					"Sustituí un proceso basado en correo electrónico y Dropbox por un portal estructurado: los profesionales registran pacientes y envían una prescripción digital con un escaneo 3D del pie, y el laboratorio hace avanzar los pedidos por una cadena de fabricación y descarga los escaneos para el fresado CAD/CAM",
 					"Traté datos de pacientes conforme al RGPD: cifrado AES-256-GCM de los archivos de escaneo en reposo, aislamiento por inquilino, protección CSRF, registro de auditoría, configuración a prueba de fallos y gestión del ciclo de vida para la limitación del plazo de conservación (art. 5.1.e), la supresión (art. 17) y el acceso y la portabilidad (arts. 15 y 20)",
-					"Redacté la documentación de cumplimiento junto con el código: evaluación de impacto (EIPD), registro de actividades de tratamiento, política de conservación, procedimiento ante brechas y aviso de privacidad",
+					"Definí y revisé la documentación de cumplimiento junto con el código: evaluación de impacto (EIPD), registro de actividades de tratamiento, política de conservación, procedimiento ante brechas y aviso de privacidad",
 					"CSP estricta sin scripts ni estilos en línea; HTML semántico con JavaScript nativo solo para mejora progresiva, además de un visor Three.js autoalojado para la previsualización de escaneos en administración",
-					"Unas 9.700 líneas de Go en 62 archivos y 13 componentes templ a lo largo de 496 commits, sobre SQLite mediante un controlador puro de Go (sin CGO) y desplegado en Fly.io",
+					"Construido por agentes bajo mi revisión: unas 9.700 líneas de Go, 62 archivos y 13 componentes templ, sobre SQLite con controlador puro de Go (sin CGO), desplegado en Fly.io",
 				},
 			},
 			Stack: []string{"Go", "templ", "SQLite", "AES-256-GCM", "Three.js", "Fly.io"},
