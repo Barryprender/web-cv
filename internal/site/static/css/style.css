@@ -1087,6 +1087,27 @@
      A native popover: the browser owns the top layer, light dismiss, Escape
      and focus return. Anchor positioning tucks it under the nav button where
      supported and falls back to a centred sheet where it is not. */
+  /* The language switcher sits with the other nav actions. It stays visible at
+     every width: a reader who cannot read the current page needs it most on a
+     phone, which is where the rest of the nav collapses. */
+  .nav-lang {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-dim);
+    text-decoration: none;
+    padding: 5px 9px;
+    border: 1px solid var(--rule-soft);
+    border-radius: 2px;
+    transition:
+      color 200ms var(--ease-out-quart),
+      border-color 200ms var(--ease-out-quart);
+  }
+  .nav-lang:hover,
+  .nav-lang:focus-visible {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
   .nav-palette-btn {
     anchor-name: --palette-anchor;
     background: none;

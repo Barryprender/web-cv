@@ -19,13 +19,27 @@ import (
 // body column holds everything else, mirroring the timeline layout on the site.
 const (
 	marginX = 48.0
-	marginY = 46.0
+	marginY = 42.0
 
 	metaWidth = 88.0 // dates and location
 	metaGap   = 16.0
 	bodyX     = marginX + metaWidth + metaGap
 
-	footerHeight = 30.0 // space reserved below the content for the running footer
+	footerHeight = 22.0 // space reserved below the content for the running footer
+)
+
+// Editorial limits. The site is the full record and scrolls for free; the PDF
+// is the two-page version a recruiter reads in half a minute, so it renders a
+// subset of the same data rather than a different set of facts.
+//
+// Both numbers are tuned against page count. TestFitsTwoPages fails if a change
+// to the CV pushes the document past two pages, which is the signal to cut
+// copy rather than to raise these.
+const (
+	detailedRoles   = 2 // employers whose bullets and stack are printed
+	jobBullets      = 3 // bullets printed per detailed role
+	projectBullets  = 2 // bullets printed per project
+	detailedProject = 3 // projects printed in full before the rest go to one line
 )
 
 // Type sizes and leadings, in points.
@@ -38,10 +52,40 @@ const (
 	sectionSize = 9.0
 	companySize = 10.5
 	roleSize    = 9.5
-	summarySize = 9.0
-	bulletSize  = 8.8
 	metaSize    = 8.0
 	stackSize   = 7.8
+)
+
+// copyMetrics are the sizes of the flowed body text. They are per-language
+// because Spanish runs about a fifth longer than English for the same meaning,
+// and the alternative to setting it slightly tighter is printing fewer of the
+// achievements in Spanish than in English.
+//
+// Content parity is the thing worth protecting: a reader sees one document, and
+// half a point of body size is invisible to them. A CV that silently says less
+// in their language is not.
+type copyMetrics struct {
+	summary float64
+	bullet  float64
+	leading float64 // added to bullet size for the line advance
+}
+
+func metricsFor(l data.Lang) copyMetrics {
+	if l == data.ES {
+		return copyMetrics{summary: 8.3, bullet: 7.9, leading: 2.4}
+	}
+	return copyMetrics{summary: 9.0, bullet: 8.6, leading: 2.8}
+}
+
+// Section headings and the running footer. These are the document's own words
+// rather than the CV's, so they live here and not in internal/data.
+var (
+	secExperience = data.T{EN: "Experience", ES: "Experiencia"}
+	secProjects   = data.T{EN: "Selected projects", ES: "Proyectos destacados"}
+	secSkills     = data.T{EN: "Skills", ES: "Competencias"}
+	secEducation  = data.T{EN: "Education", ES: "Formación"}
+	secLanguages  = data.T{EN: "Languages", ES: "Idiomas"}
+	pageWord      = data.T{EN: "Page", ES: "Página"}
 )
 
 // The palette is a greyscale reading of the site's tokens, plus the one accent.
@@ -60,13 +104,13 @@ var (
 // The document carries no creation date, so the same CV data always produces
 // byte-identical output. That is what lets a test assert the committed file is
 // current instead of merely well-formed.
-func Build() []byte {
-	b := &builder{doc: pdf.New(pdf.Options{
+func Build(lang data.Lang) []byte {
+	b := &builder{lang: lang, m: metricsFor(lang), doc: pdf.New(pdf.Options{
 		Margin:   pdf.Margin{Top: marginY, Right: marginX, Bottom: marginY, Left: marginX},
-		Title:    data.Me.Name + " — " + data.Me.Headline,
+		Title:    data.Me.Name + " — " + data.Me.Headline.In(lang),
 		Author:   data.Me.Name,
-		Subject:  data.Me.Tagline,
-		Keywords: keywords(),
+		Subject:  data.Me.Tagline.In(lang),
+		Keywords: keywords(lang),
 	})}
 
 	b.header()
@@ -74,15 +118,22 @@ func Build() []byte {
 	b.projects()
 	b.skills()
 	b.education()
-	b.languages()
 	b.footer()
 
 	return b.doc.Bytes()
 }
 
 type builder struct {
-	doc *pdf.Doc
+	doc  *pdf.Doc
+	lang data.Lang
+	m    copyMetrics
 }
+
+// t resolves one piece of bilingual copy in the language being built.
+func (b *builder) t(v data.T) string { return v.In(b.lang) }
+
+// ts resolves a bilingual list in the language being built.
+func (b *builder) ts(v data.TS) []string { return v.In(b.lang) }
 
 // bodyWidth is the width of the main text column.
 func (b *builder) bodyWidth() float64 { return b.doc.Right() - bodyX }
@@ -107,9 +158,9 @@ func (b *builder) ensure(h float64) {
 // footer names the page only.
 func (b *builder) footer() {
 	y := b.doc.Bottom() - 10
-	b.doc.Text(marginX, y, data.Me.Name+" — "+data.Me.Headline, pdf.Regular, 7.5, inkFine)
+	b.doc.Text(marginX, y, data.Me.Name+" — "+b.t(data.Me.Headline), pdf.Regular, 7.5, inkFine)
 
-	page := fmt.Sprintf("Page %d", b.doc.PageCount())
+	page := fmt.Sprintf("%s %d", b.t(pageWord), b.doc.PageCount())
 	b.doc.Text(b.doc.Right()-pdf.Width(page, pdf.Regular, 7.5), y, page, pdf.Regular, 7.5, inkFine)
 }
 
@@ -117,9 +168,9 @@ func (b *builder) footer() {
 func (b *builder) header() {
 	d := b.doc
 	d.TextLine(marginX, data.Me.Name, pdf.Bold, nameSize, nameSize+6, ink)
-	d.TextLine(marginX, data.Me.Headline, pdf.Regular, headlineSize, headlineSize+7, accent)
+	d.TextLine(marginX, b.t(data.Me.Headline), pdf.Regular, headlineSize, headlineSize+7, accent)
 
-	for _, line := range pdf.Wrap(data.Me.Tagline, pdf.Italic, taglineSize, d.ContentWidth()) {
+	for _, line := range pdf.Wrap(b.t(data.Me.Tagline), pdf.Italic, taglineSize, d.ContentWidth()) {
 		d.TextLine(marginX, line, pdf.Italic, taglineSize, taglineSize+4, inkDim)
 	}
 
@@ -127,7 +178,7 @@ func (b *builder) header() {
 	b.contactLine([]item{
 		{text: data.Me.Contact.Email, uri: "mailto:" + data.Me.Contact.Email},
 		{text: data.Me.Contact.Phone, uri: "tel:" + strings.ReplaceAll(data.Me.Contact.Phone, " ", "")},
-		{text: data.Me.Contact.Location},
+		{text: b.t(data.Me.Contact.Location)},
 	})
 	b.contactLine([]item{
 		{text: trimScheme(data.Me.Contact.Site), uri: data.Me.Contact.Site},
@@ -178,10 +229,10 @@ func (b *builder) contactLine(items []item) {
 func (b *builder) section(title string) {
 	d := b.doc
 	b.ensure(52)
-	d.Advance(16)
+	d.Advance(12)
 	d.TextLine(marginX, strings.ToUpper(title), pdf.Bold, sectionSize, sectionSize+5, ink)
 	d.Rule(marginX, d.ContentWidth(), 0.6, rule)
-	d.Advance(10)
+	d.Advance(8)
 }
 
 // entry draws one two-column record: metrics on the left, content on the right.
@@ -200,7 +251,7 @@ func (b *builder) entry(meta []string, body func()) {
 	}
 	d.SetY(start)
 	body()
-	d.Advance(14)
+	d.Advance(8)
 }
 
 // heading draws an entry's title pair: the name in bold, the role under it.
@@ -227,16 +278,24 @@ func (b *builder) paragraph(text string, size float64, colour pdf.Color) {
 	}
 }
 
+// first returns at most n items, for the places where the PDF prints a subset
+// of what the site shows.
+func first(items []string, n int) []string {
+	if len(items) <= n {
+		return items
+	}
+	return items[:n]
+}
+
 // bullets draws a hanging-indent list.
 func (b *builder) bullets(items []string) {
 	if len(items) == 0 {
 		return
 	}
 	d := b.doc
-	const (
-		indent  = 11.0
-		leading = bulletSize + 3.6
-	)
+	const indent = 11.0
+	bulletSize := b.m.bullet
+	leading := bulletSize + b.m.leading
 	d.Advance(4)
 	for _, item := range items {
 		lines := pdf.Wrap(item, pdf.Regular, bulletSize, b.bodyWidth()-indent)
@@ -289,95 +348,128 @@ func (b *builder) links(items []data.Link) {
 	d.Advance(size + 2)
 }
 
-// stack draws the technology line under an entry.
-func (b *builder) stack(items []string) {
-	if len(items) == 0 {
-		return
-	}
+// oneLine draws an entry reduced to a single line: the employer in bold and the
+// title beside it. Used for the older roles, where a reader wants the shape of
+// the career rather than what each job involved.
+func (b *builder) oneLine(name, title string) {
 	d := b.doc
-	d.Advance(4)
-	for _, line := range pdf.Wrap(strings.Join(items, "  ·  "), pdf.Regular, stackSize, b.bodyWidth()) {
-		b.ensure(stackSize + 3)
-		d.TextLine(bodyX, line, pdf.Regular, stackSize, stackSize+3, inkFine)
+	w := pdf.Width(name, pdf.Bold, companySize)
+	d.Text(bodyX, d.Y()+companySize, name, pdf.Bold, companySize, ink)
+	if title != "" {
+		const sep = " — "
+		d.Text(bodyX+w, d.Y()+companySize, sep+title, pdf.Italic, roleSize, inkDim)
 	}
+	d.Advance(companySize + 3.5)
 }
 
 func (b *builder) experience() {
-	b.section("Experience")
+	b.section(b.t(secExperience))
+
+	// Roles are listed newest first, so this counter is a recency cutoff: the
+	// most recent detailedRoles employers get their bullets, everything older
+	// is reduced to the line a reader actually uses — who, what, when. Career
+	// breaks do not count against the budget, because they carry a single line
+	// already and spending a detail slot on one would push a real role out.
+	detailed := 0
+
 	for _, job := range data.Me.Jobs {
-		meta := []string{job.Start + " — " + job.End}
-		if job.Location != "" {
-			meta = append(meta, job.Location)
+		meta := []string{data.Range(job.From, job.To, b.lang)}
+		if loc := b.t(job.Location); loc != "" {
+			meta = append(meta, loc)
 		}
+
+		brief := false
+		if job.IsEmployment() {
+			brief = detailed >= detailedRoles
+			detailed++
+		}
+
 		b.ensure(58)
 		b.entry(meta, func() {
-			b.heading(job.Company, job.Title)
-			b.paragraph(job.Summary, summarySize, inkDim)
-			b.bullets(job.Bullets)
+			if brief {
+				b.oneLine(b.t(job.Company), b.t(job.Title))
+				return
+			}
+			b.heading(b.t(job.Company), b.t(job.Title))
+			b.paragraph(b.t(job.Summary), b.m.summary, inkDim)
+			b.bullets(first(b.ts(job.Bullets), jobBullets))
 			b.links(job.Links)
-			b.stack(job.Stack)
 		})
 	}
 }
 
 func (b *builder) projects() {
-	b.section("Selected projects")
-	for _, p := range data.Me.Projects {
-		meta := []string{p.Role}
-		if p.Period != "" {
-			meta = append(meta, p.Period)
+	b.section(b.t(secProjects))
+	for i, p := range data.Me.Projects {
+		meta := []string{b.t(p.Role)}
+		if period := p.Period(b.lang); period != "" {
+			meta = append(meta, period)
 		}
+		brief := i >= detailedProject
 		b.ensure(58)
 		b.entry(meta, func() {
 			b.heading(p.Name, "")
-			b.paragraph(p.Summary, summarySize, inkDim)
-			b.bullets(p.Bullets)
+			b.paragraph(b.t(p.Summary), b.m.summary, inkDim)
+			if brief {
+				b.links(p.Links)
+				return
+			}
+			b.bullets(first(b.ts(p.Bullets), projectBullets))
 			b.links(p.Links)
-			b.stack(p.Stack)
 		})
 	}
 }
 
 func (b *builder) skills() {
-	b.section("Skills")
+	b.section(b.t(secSkills))
 	for _, group := range data.Me.Skills {
 		b.ensure(34)
-		b.entry([]string{group.Category}, func() {
-			for _, line := range pdf.Wrap(strings.Join(group.Skills, "  ·  "), pdf.Regular, summarySize, b.bodyWidth()) {
-				b.ensure(summarySize + 4)
-				b.doc.TextLine(bodyX, line, pdf.Regular, summarySize, summarySize+4, ink)
+		b.entry([]string{b.t(group.Category)}, func() {
+			for _, line := range pdf.Wrap(strings.Join(b.ts(group.Skills), "  ·  "), pdf.Regular, b.m.summary, b.bodyWidth()) {
+				b.ensure(b.m.summary + 4)
+				b.doc.TextLine(bodyX, line, pdf.Regular, b.m.summary, b.m.summary+4, ink)
 			}
 		})
 	}
+	b.languages()
 }
 
 func (b *builder) education() {
-	b.section("Education")
+	b.section(b.t(secEducation))
 	for _, e := range data.Me.Education {
-		b.ensure(46)
-		b.entry([]string{e.Start + " — " + e.End}, func() {
-			b.heading(e.Institution, e.Program)
-			b.bullets(e.Detail)
+		// One line plus the gap after it: the reservation matches what oneLine
+		// actually draws, so a row is not pushed to a new page over space it
+		// was never going to use.
+		b.ensure(companySize + 12)
+		b.entry([]string{data.Range(e.From, e.To, b.lang)}, func() {
+			b.oneLine(e.Institution, b.t(e.Program))
 		})
 	}
 }
 
+// languages draws the spoken languages as a final row of the skills table. It
+// is one line, and a section heading of its own cost more vertical space than
+// the content under it. The row keeps the word "Languages" in the left column,
+// so a CV parser still sees the label it looks for.
 func (b *builder) languages() {
-	b.section("Languages")
+	parts := make([]string, 0, len(data.Me.Languages))
 	for _, l := range data.Me.Languages {
-		b.ensure(24)
-		b.entry([]string{l.Name}, func() {
-			b.doc.TextLine(bodyX, l.Level, pdf.Regular, summarySize, summarySize+4, ink)
-		})
+		parts = append(parts, b.t(l.Name)+" — "+b.t(l.Level))
 	}
+	b.ensure(24)
+	b.entry([]string{b.t(secLanguages)}, func() {
+		for _, line := range pdf.Wrap(strings.Join(parts, "  ·  "), pdf.Regular, b.m.summary, b.bodyWidth()) {
+			b.doc.TextLine(bodyX, line, pdf.Regular, b.m.summary, b.m.summary+4, ink)
+		}
+	})
 }
 
 // keywords fills the Info dictionary's Keywords entry from the skills, which is
 // what a document-indexing search actually reads.
-func keywords() string {
+func keywords(lang data.Lang) string {
 	var all []string
 	for _, group := range data.Me.Skills {
-		all = append(all, group.Skills...)
+		all = append(all, group.Skills.In(lang)...)
 	}
 	return strings.Join(all, ", ")
 }

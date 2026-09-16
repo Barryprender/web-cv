@@ -1,32 +1,35 @@
 # barrypre.com
 
-Barry Prendergast's CV site. Go stdlib backend, native Web Components on the
-frontend, zero external JS/CSS dependencies.
+Barry Prendergast's CV site. Go standard-library backend, native Web Components
+on the frontend, zero external runtime dependencies — `go.mod` requires nothing
+but Go itself, and no JavaScript, CSS or font is fetched from a third party.
 
 ## Stack
 
 - **Backend**: `net/http` (Go 1.22+ method-tagged routing), `html/template`,
   everything embedded into one binary via `embed.FS`. No framework.
 - **Frontend**: native custom elements (`<cv-nav>`, `<cv-theme-toggle>`,
-  `<cv-timeline>`, `<cv-contact-form>`), loaded as a plain ES module — no
-  bundler, no npm dependency. Content stays in the light DOM so it's
-  crawlable and works with JS disabled; the elements only add behavior
-  (mobile menu, theme persistence, scroll-reveal, form submission).
-- **Content**: `internal/data/cv.go` is the single source of truth. Templates
-  render from it — edit the Go values, not the HTML, to update the CV.
+  `<cv-filter>`, `<cv-timeline>`, `<cv-contact-form>`) plus two plain modules
+  (`cv-palette.js`, `cv-transitions.js`), loaded as ES modules — no bundler, no
+  npm dependency. Content stays in the light DOM so it is crawlable and works
+  with JavaScript disabled; the scripts only add behaviour (mobile menu, theme
+  and palette persistence, filtering, scroll-reveal, view transitions, form
+  submission).
+- **Fonts**: Public Sans, Newsreader and JetBrains Mono, self-hosted as
+  subsetted woff2 files under `internal/site/static/fonts`. Nothing is
+  requested from a font CDN.
+- **Content**: `internal/data/cv.go` is the single source of truth, in English
+  and Spanish. Templates render from it — edit the Go values, not the HTML, to
+  update the CV.
+- **Languages**: English at the root, Spanish under `/es`, with hreflang
+  alternates and a PDF each. See [Languages](#languages) below.
 - **Email**: `internal/mail` sends contact form submissions through Resend or
   Postmark (or both, with failover) over plain `net/http` — no SDK, no
   dependency.
-- **PDF**: `internal/pdf` is a small PDF writer built on the standard library
-  (base-14 fonts, one Flate content stream per page, real link annotations).
-  `internal/cvpdf` lays the CV out with it. The file is generated at build
-  time, not per request, so a visitor cannot make the server render anything.
-
-Originally planned to use `templ` (matching the stack on your other Fly.io
-project) but this sandbox's network allowlist blocked `proxy.golang.org`, so
-it fell back to `html/template` — arguably the better call anyway per your
-own rule to avoid frameworks unless needed. Swapping to `templ` later is a
-templates-only change if you want the extra type safety.
+- **PDF**: `internal/pdf` is a PDF writer built on the standard library, and
+  `internal/cvpdf` lays the CV out with it. See
+  [The PDF writer](#the-pdf-writer) below for why it is written rather than
+  imported.
 
 ## Run locally
 
@@ -55,9 +58,9 @@ Edit `internal/data/cv.go`, then regenerate the PDF:
 go generate ./internal/site
 ```
 
-`TestPDFIsCurrent` fails if the committed `internal/site/static/cv.pdf` has
-fallen behind the data, so a forgotten regeneration shows up in `go test ./...`
-rather than shipping a PDF that disagrees with the site.
+One run writes both languages. `TestPDFIsCurrent` fails if either committed PDF
+has fallen behind the data, so a forgotten regeneration shows up in
+`go test ./...` rather than shipping a PDF that disagrees with the site.
 
 ## Contact form delivery
 
@@ -88,19 +91,117 @@ reaches them. It is parsed with `net/mail` and rejected unless it is a bare
 address — that field is the one piece of visitor input that ends up in an email
 header.
 
+`POST /contact` sits behind a per-IP token bucket (`internal/site/ratelimit.go`)
+with a capped tracking map, so neither the endpoint nor the inbox behind it can
+be flooded by a single client.
+
+## Languages
+
+The site publishes in English and Spanish. English keeps the bare paths it has
+always had (`/experience`), Spanish sits under a prefix (`/es/experience`), so
+adding the translation moved no URL that was already in circulation.
+
+Both languages live in the same literal. `internal/data/lang.go` defines `T`,
+which holds one piece of copy in both:
+
+```go
+Title: T{
+    EN: "Senior Frontend Developer",
+    ES: "Desarrollador Frontend Senior",
+},
+```
+
+That adjacency is the point. A role cannot be added, or its wording changed,
+without the other language being visible in the same edit — two parallel files
+drift the first time someone is in a hurry. A missing Spanish string falls back
+to English rather than rendering an empty element.
+
+Dates are stored as numbers (`Date{Year: 2020, Month: 9}`) and written out per
+language, so "September 2020" and "septiembre de 2020" come from one value
+instead of two translated strings that can disagree.
+
+`internal/site/ui.go` holds the interface strings — navigation, buttons, form
+labels, status messages. They are resolved into plain strings once at startup,
+so a template writes `{{.UI.NavHome}}` and a typo fails to render rather than
+quietly producing an empty element.
+
+Each language gets its own PDF: `/cv.pdf` and `/es/cv.pdf`, generated together
+by one `go generate`. `TestPDFIsCurrent` checks both against the data.
+
+Known simplification: the Spanish URLs keep the English slugs (`/es/experience`,
+not `/es/experiencia`). Translating them means a route table mapping slugs per
+language, which is worth doing if the Spanish pages ever need to rank on their
+own terms.
+
 ## Structure
 
 ```
 cmd/server/main.go         entrypoint, graceful shutdown
-cmd/pdfgen/main.go         writes internal/site/static/cv.pdf from the CV data
-internal/data/cv.go        CV content (edit this to update the site)
+cmd/pdfgen/main.go         writes cv.pdf and cv-es.pdf from the CV data
+internal/data/cv.go        CV content, English and Spanish (edit this)
+internal/data/lang.go      the T/TS/Date types the bilingual content uses
 internal/mail/             Resend + Postmark senders, failover chain, env config
 internal/pdf/              minimal stdlib PDF writer (no dependencies)
 internal/cvpdf/            CV page layout, built on internal/pdf
 internal/site/site.go      routes, embed directives, contact handler
+internal/site/security.go  CSP and the rest of the security headers
+internal/site/static.go    embedded asset handler: ETags, content types, 304s
+internal/site/ratelimit.go per-IP token bucket for POST /contact
+internal/site/seo.go       canonical URLs, JSON-LD, robots.txt, sitemap.xml
+internal/site/ui.go        interface strings and page titles, per language
+internal/site/email.go     HTML + text rendering of a contact message
 internal/site/templates/   html/template files (layout + one per page)
-internal/site/static/      css + js + cv.pdf, embedded into the binary
+internal/site/static/      css + js + fonts + icons + cv.pdf, all embedded
 ```
+
+Beyond the content pages in both languages, the server answers `GET /cv.pdf`,
+`GET /es/cv.pdf`, `GET /robots.txt`, `GET /sitemap.xml`, `GET /healthz`,
+`GET /favicon.ico`, `GET /static/…`, and `POST /contact` under each language
+prefix.
+
+## Security headers
+
+`internal/site/security.go` sets a Content-Security-Policy that denies
+everything by default and carries no `unsafe-` token: every script ships as an
+external module under `/static`, and no template sets a `style="…"` attribute.
+Adding one would mean loosening `style-src` for the whole site, so do not add
+one.
+
+## The PDF writer
+
+`internal/pdf` is about 600 lines of PDF 1.4 (ISO 32000-1) on the standard
+library: indirect objects, one Flate-compressed content stream per page, a
+cross-reference table, WinAnsi text in the base-14 fonts, and real link
+annotations. `internal/cvpdf` lays the CV out with it, reading `internal/data`
+directly so the PDF cannot say anything the site does not.
+
+It is written rather than imported because this project has no other
+third-party module, and a PDF library would have been the first. Adding one is
+not a cost paid once at import — it is paid on every advisory, every upgrade
+and every SBOM review, for the life of the product, to produce a document that
+needs a small fraction of what a general-purpose library installs.
+
+The security claim worth making is narrow: **this package writes and never
+reads.** It parses no PDF, accepts no file, and takes no input that did not
+come from a Go source file in this repository. The vulnerability class that
+makes PDF handling dangerous belongs to parsers consuming documents from
+strangers. There is no parser here. Generation also runs at build time, so no
+PDF code is reachable from a request at all.
+
+"We wrote it ourselves, so it is safer" is *not* the claim. Hand-written code
+has its own defects and no upstream security team, and `SECURITY.md` response
+windows apply to this package in full.
+
+It is not a general PDF library and does not try to be. No embedded font
+programs, no colour space beyond DeviceRGB, no forms, no tagging, no
+encryption. If any of those are needed, this package is the wrong tool and a
+real library is the answer.
+
+Output is byte-for-byte deterministic (`TestOutputIsDeterministic`), so the
+committed file diffs meaningfully and CI can prove it matches the data.
+
+Full reasoning, the alternatives weighed, and the conditions that would reverse
+the decision: [ADR-0001](docs/adr/0001-write-the-cv-pdf-with-the-standard-library.md).
 
 ## The CV download
 
@@ -109,6 +210,19 @@ everything else, so it carries an ETag and answers a repeat visit with a 304.
 It is sent `inline` with a `Content-Disposition` filename, so the browser's
 viewer opens it while the `download` attribute on the link still saves it as
 `Barry-Prendergast-CV.pdf`.
+
+The PDF is an abridged version of the site, not a copy of it. The site scrolls
+for free; the PDF is what a recruiter reads in half a minute, so it holds two
+pages. Every employer still appears — only the detail is cut, so nothing on the
+site is silently missing from the PDF. The editorial limits are the constants
+at the top of `internal/cvpdf/cvpdf.go`, and `TestFitsTwoPages` fails if added
+copy pushes either language to a third page.
+
+Both languages print the same achievements. Spanish runs about a fifth longer
+for the same meaning, so it is set slightly tighter (`metricsFor`) rather than
+given fewer bullets: half a point of body size is invisible to a reader who
+only ever sees one document, and a CV that silently says less in their language
+is not.
 
 Set in Helvetica rather than the site's Public Sans: embedding a real typeface
 would mean parsing woff2 (Brotli) and subsetting TrueType, neither of which is
@@ -134,6 +248,10 @@ guarantees the browser's leg is HTTPS; Fly terminates TLS at its proxy, so
 a forwarded header any client could set. Do not set it anywhere without
 `force_https`.
 
+The contact form stays fail-closed in production until `CONTACT_FROM` and at
+least one provider key are set as Fly secrets and the sending domain is
+verified with that provider.
+
 ## Verification and compliance
 
 - `.github/workflows/ci.yml` — format, vet, build, tests with coverage, skip
@@ -145,19 +263,39 @@ a forwarded header any client could set. Do not set it anywhere without
   risk assessment, standards applied, support lifecycle.
 - `sbom.json` — CycloneDX 1.6, regenerated by CI and diffed against the
   committed copy. The regeneration command is in `SECURITY.md`.
+- `docs/adr/` — decision records, for the choices that would otherwise have to
+  be reconstructed from source comments.
 
 The Go version is pinned in three places — `go.mod`, `Dockerfile` and
 `GO_VERSION` in the workflow. **Raise all three together.** The floor is 1.25.13
 because `govulncheck` reports 22 reachable standard-library vulnerabilities
 below it.
 
-Coverage is 94.7% of statements across `./internal/...`.
+Coverage is 95.0% of statements across `./internal/...`, measured the way CI
+measures it:
 
-## Still open
+```
+go test ./... -count=1 -coverpkg=./internal/... -coverprofile=coverage.out
+go tool cover -func=coverage.out | tail -1
+```
 
-- Set `CONTACT_FROM` and at least one provider key in the Fly secrets before
-  this goes live, and verify the sending domain with that provider — the form
-  is fail-closed until you do.
-- There's a 14-month gap in the experience data between Arcmedia AG (ended
-  July 2019) and Quality Compusoft (started September 2020) — carried over from
-  the LinkedIn export as-is; fill in or explain if you want it covered.
+`-coverpkg` matters here: per-package coverage reports `internal/data` at 0%,
+because it holds no logic of its own and is reached through the site handlers.
+
+## Reporting a security issue
+
+See `SECURITY.md`. Please do not open a public issue for a vulnerability.
+
+## Licence
+
+The code is MIT licensed — see `LICENSE`.
+
+The CV content is not. `internal/data/cv.go`, the generated `cv.pdf`, the
+fixtures in the tests, and the personal details throughout are Barry
+Prendergast's own, and the MIT grant does not extend to them. Reuse the site,
+not the CV.
+
+The bundled fonts carry their own licence: Public Sans, Newsreader and
+JetBrains Mono are all SIL Open Font License 1.1. The text and the copyright
+notices ship beside them in `internal/site/static/fonts/OFL.txt`, which is
+embedded with the fonts and served at `/static/fonts/OFL.txt`.

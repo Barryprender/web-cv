@@ -85,7 +85,7 @@ Every one of these fails the build rather than warning. See
 | Gate | What it catches |
 | --- | --- |
 | `gofmt -l`, `go vet` | Formatting drift, and the vet checks including printf and struct tags |
-| `go test -count=1` with `-coverpkg=./internal/...` | Regressions, uncached; coverage is 94.7% of internal statements |
+| `go test -count=1` with `-coverpkg=./internal/...` | Regressions, uncached; coverage is 95.0% of internal statements |
 | Skip detection | A test that quietly opted out on a missing environment variable |
 | `go generate` reproducibility | A committed `cv.pdf` that no longer matches its generator |
 | `govulncheck ./...` | Known vulnerabilities. This project has no third-party dependencies, so every finding is a standard-library one and the fix is raising the pinned Go version |

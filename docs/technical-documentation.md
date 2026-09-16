@@ -102,7 +102,7 @@ submission exists only in flight and in the provider's own logs.
 CI is `.github/workflows/ci.yml`. Every job fails the build; none warn. The
 gates and what each catches are tabulated in `SECURITY.md`.
 
-Test coverage is **94.7%** of statements across `./internal/...`. That number is
+Test coverage is **95.0%** of statements across `./internal/...`. That number is
 printed by the test job on every run. Coverage is not correctness — it says the
 lines executed, not that the assertions were the right ones.
 

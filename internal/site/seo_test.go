@@ -109,14 +109,62 @@ func TestSitemapCoversEveryRoute(t *testing.T) {
 	}
 
 	body := rec.Body.String()
-	for route := range pages {
-		loc := "<loc>" + canonicalURL(route) + "</loc>"
-		if !strings.Contains(body, loc) {
-			t.Errorf("sitemap is missing %s", loc)
+	for _, lang := range data.Langs {
+		for route := range pages {
+			loc := "<loc>" + canonicalURL(lang, route) + "</loc>"
+			if !strings.Contains(body, loc) {
+				t.Errorf("sitemap is missing %s", loc)
+			}
 		}
 	}
-	if got := strings.Count(body, "<loc>"); got != len(pages) {
-		t.Errorf("sitemap lists %d URLs, want %d", got, len(pages))
+	if want := len(pages) * len(data.Langs); strings.Count(body, "<loc>") != want {
+		t.Errorf("sitemap lists %d URLs, want %d", strings.Count(body, "<loc>"), want)
+	}
+}
+
+// Every entry must name every language, itself included, plus x-default.
+// hreflang is only honoured when the links are reciprocal, and a one-way set
+// is the usual way a translated site ends up treated as duplicate content.
+func TestSitemapDeclaresReciprocalAlternates(t *testing.T) {
+	body := get(t, newTestHandler(t), "/sitemap.xml").Body.String()
+
+	for _, lang := range data.Langs {
+		for route := range pages {
+			link := `<xhtml:link rel="alternate" hreflang="` + lang.Tag() +
+				`" href="` + canonicalURL(lang, route) + `"/>`
+			// One per language block, so len(Langs) occurrences in total.
+			if got := strings.Count(body, link); got != len(data.Langs) {
+				t.Errorf("%s alternate for %s appears %d times, want %d",
+					lang, route, got, len(data.Langs))
+			}
+		}
+	}
+
+	if got, want := strings.Count(body, `hreflang="x-default"`), len(pages)*len(data.Langs); got != want {
+		t.Errorf("x-default appears %d times, want %d", got, want)
+	}
+}
+
+// Each language must render its own copy, and the page must say which one it
+// is. A Spanish URL serving English markup would still return 200.
+func TestEachLanguageRendersItsOwnCopy(t *testing.T) {
+	h := newTestHandler(t)
+	for _, lang := range data.Langs {
+		body := get(t, h, localPath(lang, "/")).Body.String()
+
+		if !strings.Contains(body, `<html lang="`+string(lang)+`">`) {
+			t.Errorf("%s home page does not declare lang=%q", lang, lang)
+		}
+		if want := data.Me.Tagline.In(lang); !strings.Contains(body, want) {
+			t.Errorf("%s home page is missing its own tagline", lang)
+		}
+		if want := `<link rel="canonical" href="` + canonicalURL(lang, "/") + `">`; !strings.Contains(body, want) {
+			t.Errorf("%s home page is missing %s", lang, want)
+		}
+		// The switcher is the only way a visitor moves between them.
+		if want := localPath(otherLang(lang), "/"); !strings.Contains(body, `href="`+want+`"`) {
+			t.Errorf("%s home page does not link to %s", lang, want)
+		}
 	}
 }
 
@@ -128,9 +176,18 @@ func TestCanonicalURL(t *testing.T) {
 	origin := strings.TrimSuffix(data.Me.Contact.Site, "/")
 	for _, route := range routes() {
 		want := origin + route
-		if got := canonicalURL(route); got != want {
-			t.Errorf("canonicalURL(%q) = %q, want %q", route, got, want)
+		if got := canonicalURL(data.EN, route); got != want {
+			t.Errorf("canonicalURL(EN, %q) = %q, want %q", route, got, want)
 		}
+	}
+
+	// The Spanish root must be /es, never /es/ — the two would be separate
+	// URLs to a crawler, and only one of them is linked to.
+	if got, want := canonicalURL(data.ES, "/"), origin+"/es"; got != want {
+		t.Errorf("canonicalURL(ES, \"/\") = %q, want %q", got, want)
+	}
+	if got, want := canonicalURL(data.ES, "/skills"), origin+"/es/skills"; got != want {
+		t.Errorf("canonicalURL(ES, \"/skills\") = %q, want %q", got, want)
 	}
 }
 
@@ -138,7 +195,7 @@ func TestCanonicalURL(t *testing.T) {
 // into rel=canonical, og:url and the sitemap, and a relative or unparseable
 // value there is invisible until a crawler chokes on it.
 func TestCanonicalOriginIsAbsoluteHTTPS(t *testing.T) {
-	u, err := url.Parse(canonicalURL("/"))
+	u, err := url.Parse(canonicalURL(data.EN, "/"))
 	if err != nil {
 		t.Fatalf("canonical URL does not parse: %v", err)
 	}
@@ -214,7 +271,7 @@ func TestOutboundLinksArePresent(t *testing.T) {
 		}
 	}
 	for _, job := range data.Me.Jobs {
-		check("/experience", job.Links, job.Company)
+		check("/experience", job.Links, job.Company.In(data.EN))
 	}
 	for _, project := range data.Me.Projects {
 		check("/projects", project.Links, project.Name)
@@ -231,8 +288,8 @@ func TestLanguagesAndEducationDetailRender(t *testing.T) {
 		t.Fatal("no languages in the CV data")
 	}
 	for _, lang := range data.Me.Languages {
-		if !strings.Contains(body, lang.Name) || !strings.Contains(body, lang.Level) {
-			t.Errorf("skills page is missing language %q", lang.Name)
+		if !strings.Contains(body, lang.Name.In(data.EN)) || !strings.Contains(body, lang.Level.In(data.EN)) {
+			t.Errorf("skills page is missing language %q", lang.Name.In(data.EN))
 		}
 	}
 	if n := strings.Count(body, `class="language-row"`); n != len(data.Me.Languages) {
@@ -240,7 +297,7 @@ func TestLanguagesAndEducationDetailRender(t *testing.T) {
 	}
 
 	for _, entry := range data.Me.Education {
-		for _, detail := range entry.Detail {
+		for _, detail := range entry.Detail.In(data.EN) {
 			if !strings.Contains(body, detail) {
 				t.Errorf("skills page is missing education detail %q", detail[:40])
 			}

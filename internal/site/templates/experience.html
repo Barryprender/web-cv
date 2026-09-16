@@ -1,29 +1,29 @@
 {{define "content"}}
 <section class="page-header">
   <p class="eyebrow" aria-hidden="true">~/experience</p>
-  <h1>Experience</h1>
+  <h1>{{.UI.Experience}}</h1>
 </section>
 
-<cv-filter data-item=".timeline-item" data-noun="role">
+<cv-filter data-item=".timeline-item" data-noun="{{.UI.FilterRole}}">
   <cv-timeline>
   {{range $i, $job := .CV.Jobs}}
   <article class="timeline-item" aria-labelledby="job-{{$i}}-name">
     <div class="timeline-meta">
-      <div>{{.Start}} — {{.End}}</div>
-      {{if .Location}}<div class="timeline-location">{{.Location}}</div>{{end}}
+      <div>{{.Period $.Lang}}</div>
+      {{with .Location.In $.Lang}}<div class="timeline-location">{{.}}</div>{{end}}
     </div>
     <div class="timeline-body">
-      <h2 id="job-{{$i}}-name">{{.Company}}</h2>
-      <div class="timeline-role">{{.Title}}</div>
-      {{if .Summary}}<p class="timeline-summary">{{.Summary}}</p>{{end}}
+      <h2 id="job-{{$i}}-name">{{.Company.In $.Lang}}</h2>
+      <div class="timeline-role">{{.Title.In $.Lang}}</div>
+      {{with .Summary.In $.Lang}}<p class="timeline-summary">{{.}}</p>{{end}}
 
-      {{if .Bullets}}
+      {{if .Bullets.In $.Lang}}
       <button class="timeline-toggle" type="button"
               aria-expanded="false" aria-controls="job-{{$i}}-details">
         {{/* Only the label span is rewritten by cv-timeline.js, so the company
              name stays part of the button's accessible name in both states. */}}
-        <span class="timeline-toggle-label">+ details</span>
-        <span class="visually-hidden"> for {{.Company}}</span>
+        <span class="timeline-toggle-label">{{$.UI.Details}}</span>
+        <span class="visually-hidden">{{$.UI.DetailsFor}}{{.Company.In $.Lang}}</span>
       </button>
       <div class="timeline-reveal" id="job-{{$i}}-details">
         {{/* The inner element is the overflow box. Padding on the list itself
@@ -31,7 +31,7 @@
              while collapsed. */}}
         <div class="timeline-reveal-inner">
           <ul class="timeline-bullets">
-            {{range .Bullets}}<li>{{.}}</li>{{end}}
+            {{range .Bullets.In $.Lang}}<li>{{.}}</li>{{end}}
           </ul>
         </div>
       </div>
