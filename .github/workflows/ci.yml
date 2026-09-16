@@ -145,15 +145,19 @@ jobs:
       # that is noise; here it is the entire dependency list, and it is what
       # makes a toolchain bump without a regenerated SBOM fail this job.
       #
-      # Two fields are volatile and are normalised away by the sed: the
-      # generation timestamp, and the main component's pseudo-version, which is
+      # Three fields are volatile and are normalised away by the sed: the
+      # generation timestamp; the main component's pseudo-version, which is
       # derived from the git commit and would therefore change on every commit
-      # regardless of whether anything about the dependencies did.
+      # regardless of whether anything about the dependencies did; and the
+      # hashes of the cyclonedx-gomod binary itself, which `go install` builds
+      # afresh here and which therefore differ between this runner and whatever
+      # machine regenerated the committed file. That block describes the
+      # generator's build environment, not this product's dependencies.
       - name: Regenerate and compare
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
             cyclonedx-gomod app -json -std -noserial -main ./cmd/server -output - \
-            | sed -E '/^    "timestamp": /d; s/v0\.0\.0-[0-9]{14}-[0-9a-f]{12}/v0.0.0-devel/g' \
+            | sed -E '/^    "timestamp": /d; /^        "hashes": \[$/,/^        \],$/d; s/v0\.0\.0-[0-9]{14}-[0-9a-f]{12}/v0.0.0-devel/g' \
             > sbom.regenerated.json
           if ! diff -u sbom.json sbom.regenerated.json; then
             echo "sbom.json is stale. Regenerate it with the command in SECURITY.md and commit the result."
