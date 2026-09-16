@@ -186,6 +186,17 @@
     color-scheme: light dark;
   }
 
+  /* An explicit override has to carry color-scheme with it. Without this the
+     UA canvas, the scrollbars and the form controls stay on the OS preference,
+     so a visitor who chose dark on a light OS got light scrollbars and a light
+     flash behind the page during a view transition. */
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+  }
+  :root[data-theme='light'] {
+    color-scheme: light;
+  }
+
   body {
     margin: 0;
     background: var(--bg);

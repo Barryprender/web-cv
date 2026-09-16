@@ -163,3 +163,32 @@ func TestMotionRespectsReducedMotion(t *testing.T) {
 		}
 	}
 }
+
+// The theme script is the one piece of JavaScript that must run before the
+// first paint, so the ordering rules that make it blocking are load-bearing:
+// type="module", defer or async each push it past the paint, and a position
+// below the stylesheet makes it wait for that sheet to load. Any of the four
+// brings back a light frame on every navigation for a visitor who chose dark
+// on a light OS. None of it is visible in a rendering test, so it is pinned
+// against the markup here.
+func TestThemeScriptBlocksBeforeTheStylesheet(t *testing.T) {
+	body := pageBody(t, "/")
+
+	tag := regexp.MustCompile(`<script[^>]*js/theme\.js[^>]*></script>`).FindString(body)
+	if tag == "" {
+		t.Fatal("the theme script is missing from the document head")
+	}
+	for _, forbidden := range []string{"module", "defer", "async"} {
+		if strings.Contains(tag, forbidden) {
+			t.Errorf("theme script carries %q, which defers it past the first paint: %s", forbidden, tag)
+		}
+	}
+
+	stylesheet := strings.Index(body, `<link rel="stylesheet"`)
+	if stylesheet < 0 {
+		t.Fatal("no stylesheet link in the document head")
+	}
+	if strings.Index(body, tag) > stylesheet {
+		t.Error("the theme script sits below the stylesheet, so it waits for it to load")
+	}
+}
