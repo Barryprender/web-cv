@@ -104,14 +104,18 @@ untested code correct. They catch what they are pointed at.
 
 `sbom.json` is CycloneDX 1.6, generated under the build constraints of the
 deployed container rather than a developer's machine, because those constraints
-decide module selection. Two volatile fields — the generation timestamp and the
-main component's commit-derived pseudo-version — are normalised away so the
-freshness check compares content and not noise.
+decide module selection. Three volatile fields are normalised away so the
+freshness check compares content and not noise: the generation timestamp, the
+main component's commit-derived pseudo-version, and the hashes of the
+`cyclonedx-gomod` binary itself. That last one is not reproducible — `go install`
+builds the generator afresh on every machine and on the CI runner — and it
+describes the generator's build environment rather than this product's
+dependencies.
 
 ```
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
   cyclonedx-gomod app -json -std -noserial -main ./cmd/server -output - \
-  | sed -E '/^    "timestamp": /d; s/v0\.0\.0-[0-9]{14}-[0-9a-f]{12}/v0.0.0-devel/g' \
+  | sed -E '/^    "timestamp": /d; /^        "hashes": \[$/,/^        \],$/d; s/v0\.0\.0-[0-9]{14}-[0-9a-f]{12}/v0.0.0-devel/g' \
   > sbom.json
 ```
 
