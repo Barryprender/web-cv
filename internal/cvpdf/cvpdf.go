@@ -39,7 +39,7 @@ const (
 	detailedRoles   = 2 // employers whose bullets and stack are printed
 	jobBullets      = 3 // bullets printed per detailed role
 	projectBullets  = 2 // bullets printed per project
-	detailedProject = 3 // projects printed in full before the rest go to one line
+	detailedProject = 2 // projects printed in full before the rest go to one line
 )
 
 // Type sizes and leadings, in points.

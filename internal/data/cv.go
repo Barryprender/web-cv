@@ -449,6 +449,30 @@ var Me = struct {
 			},
 			Stack: []string{"Go", "templ", "SQLite", "HTMX"},
 		},
+		{
+			Name:  "AI Harness",
+			Role:  T{EN: "Own project", ES: "Proyecto propio"},
+			Links: []Link{{Label: "github.com/Barryprender/AI-Harness", URL: "https://github.com/Barryprender/AI-Harness"}},
+			Summary: T{
+				EN: "Governance harness for AI coding agents: it makes unverified code hard to ship.",
+				ES: "Arnés de control para agentes de IA: dificulta publicar código no verificado.",
+			},
+			Bullets: TS{
+				EN: []string{
+					"Designed four Claude Code hooks that gate edits, commits and end of turn against one verify.sh that each project owns, the same script CI runs",
+					"Set the rule that blocking follows reversibility: block at commit, report at end of turn, recorded as ADRs",
+					"Specified an honest exit contract (0 pass, 1 fail, 2 could not run), so a skipped test or a missing scanner never reads as green",
+					"Agent-built under the harness it contains; every gate has a test, CI runs them all, and I reviewed every line before commit",
+				},
+				ES: []string{
+					"Diseñé cuatro hooks de Claude Code que controlan ediciones, commits y fin de turno contra un único verify.sh propio de cada proyecto, el mismo que ejecuta la CI",
+					"Fijé la regla de que bloquear depende de la reversibilidad: bloquear en el commit, informar al final del turno, registrado en ADR",
+					"Especifiqué un contrato de salida honesto (0 pasa, 1 falla, 2 no pudo ejecutarse), para que un test omitido o un escáner ausente nunca parezca verde",
+					"Construido por agentes bajo el propio arnés; cada control tiene su test, la CI los ejecuta todos y revisé cada línea antes del commit",
+				},
+			},
+			Stack: []string{"Shell", "Go", "Claude Code", "GitHub Actions"},
+		},
 	},
 	Skills: []SkillGroup{
 		{
