@@ -499,8 +499,8 @@ var Me = struct {
 		{
 			Category: T{EN: "Practice", ES: "Práctica"},
 			Skills: TS{
-				EN: []string{"i18n / l10n", "Git", "Component library design", "Framework-agnostic architecture"},
-				ES: []string{"i18n / l10n", "Git", "Diseño de bibliotecas de componentes", "Arquitectura independiente de frameworks"},
+				EN: []string{"i18n / l10n", "Git", "Component library design", "Framework-agnostic architecture", "AI agent orchestration", "CI verification gates"},
+				ES: []string{"i18n / l10n", "Git", "Diseño de bibliotecas de componentes", "Arquitectura independiente de frameworks", "Orquestación de agentes de IA", "Controles de verificación en CI"},
 			},
 		},
 	},
