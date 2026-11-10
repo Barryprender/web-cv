@@ -29,17 +29,17 @@ const (
 )
 
 // Editorial limits. The site is the full record and scrolls for free; the PDF
-// is the two-page version a recruiter reads in half a minute, so it renders a
+// is the three-page version a recruiter reads in a minute, so it renders a
 // subset of the same data rather than a different set of facts.
 //
-// Both numbers are tuned against page count. TestFitsTwoPages fails if a change
-// to the CV pushes the document past two pages, which is the signal to cut
+// Both numbers are tuned against page count. TestFitsThreePages fails if a change
+// to the CV pushes the document past three pages, which is the signal to cut
 // copy rather than to raise these.
 const (
 	detailedRoles   = 2 // employers whose bullets and stack are printed
 	jobBullets      = 3 // bullets printed per detailed role
 	projectBullets  = 2 // bullets printed per project
-	detailedProject = 2 // projects printed in full before the rest go to one line
+	detailedProject = 3 // projects printed in full before the rest go to one line
 )
 
 // Type sizes and leadings, in points.

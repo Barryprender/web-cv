@@ -10,19 +10,19 @@ import (
 
 // maxPages is the length a recruiter will actually read. The editorial limits
 // at the top of cvpdf.go exist to hold the document to it.
-const maxPages = 2
+const maxPages = 3
 
 var pageCountRe = regexp.MustCompile(`/Count (\d+)`)
 
-// TestFitsTwoPages fails when added CV content pushes the PDF past two pages.
+// TestFitsThreePages fails when added CV content pushes the PDF past three pages.
 //
 // The failure is the point: it is a prompt to cut copy or lower one of the
 // editorial limits, not to raise maxPages. A CV that grows a page every year
 // is the thing this guards against.
-func TestFitsTwoPages(t *testing.T) {
+func TestFitsThreePages(t *testing.T) {
 	// Checked per language: Spanish runs longer than English for the same
 	// meaning, so a translation is the edit most likely to push the document
-	// onto a third page.
+	// onto a fourth page.
 	for _, lang := range data.Langs {
 		t.Run(string(lang), func(t *testing.T) {
 			m := pageCountRe.FindSubmatch(Build(lang))

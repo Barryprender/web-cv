@@ -212,11 +212,11 @@ viewer opens it while the `download` attribute on the link still saves it as
 `Barry-Prendergast-CV.pdf`.
 
 The PDF is an abridged version of the site, not a copy of it. The site scrolls
-for free; the PDF is what a recruiter reads in half a minute, so it holds two
+for free; the PDF is what a recruiter reads in half a minute, so it holds three
 pages. Every employer still appears — only the detail is cut, so nothing on the
 site is silently missing from the PDF. The editorial limits are the constants
-at the top of `internal/cvpdf/cvpdf.go`, and `TestFitsTwoPages` fails if added
-copy pushes either language to a third page.
+at the top of `internal/cvpdf/cvpdf.go`, and `TestFitsThreePages` fails if added
+copy pushes either language to a fourth page.
 
 Both languages print the same achievements. Spanish runs about a fifth longer
 for the same meaning, so it is set slightly tighter (`metricsFor`) rather than
