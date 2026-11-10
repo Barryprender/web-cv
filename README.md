@@ -238,8 +238,9 @@ expands every collapsed timeline entry, and forces a light palette.
 `Dockerfile` and `fly.toml` are in the repository. `fly deploy` builds the image
 and ships it to the `barrypre-web` app in `ams`.
 
-The image is two stages: a pinned `golang:1.26.11-alpine` builder that produces
-a static binary, and `distroless/static-debian12:nonroot` to run it — no shell,
+The image is two stages: a `golang:1.26-alpine` builder,
+pinned to Go 1.26.11 by `GOTOOLCHAIN`, that produces a static binary, and
+`distroless/static-debian12:nonroot` to run it — no shell,
 no package manager, no libc, running as uid 65532.
 
 `fly.toml` sets `FORCE_HSTS=1`. That is only correct because `force_https`

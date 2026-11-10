@@ -3,14 +3,22 @@
 # The go.mod has no requires, so there is no dependency download step and
 # nothing to cache — the whole build is the standard library plus this source.
 #
-# The version is pinned exactly, not floated on golang:1.26-alpine, and the
+# The Go toolchain is pinned exactly by GOTOOLCHAIN below, and the
 # floor is 1.26.11 because govulncheck reports 13 reachable standard-library
 # vulnerabilities in 1.25.13 — in crypto/tls, crypto/x509, html/template,
 # mime/multipart and net/http — fixed only in 1.26.9 and 1.26.10. Go 1.25 is
 # out of support.
+#
+# The image tag carries only the minor version because Docker Hub publishes
+# golang:<patch>-alpine some time after the Go release itself: golang:1.26.11-alpine
+# did not exist when the floor was raised, and the image build failed on it.
+# GOTOOLCHAIN makes the go command fetch exactly 1.26.11, checksum-verified
+# against sum.golang.org, whatever patch release the 1.26 image holds.
+#
 # Raise this together with the go directive in go.mod and go-version in
 # .github/workflows/ci.yml; a mismatch means CI is not testing what ships.
-FROM golang:1.26.11-alpine AS build
+FROM golang:1.26-alpine AS build
+ENV GOTOOLCHAIN=go1.26.11
 
 WORKDIR /src
 COPY . .
