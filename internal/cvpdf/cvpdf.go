@@ -426,6 +426,12 @@ func (b *builder) projects() {
 }
 
 func (b *builder) skills() {
+	// Skills, languages and education read as one block, so they always start
+	// a fresh page rather than splitting wherever the projects happen to end.
+	if b.doc.Y() > marginY {
+		b.footer()
+		b.doc.NewPage()
+	}
 	b.section(b.t(secSkills))
 	for _, group := range data.Me.Skills {
 		b.ensure(34)

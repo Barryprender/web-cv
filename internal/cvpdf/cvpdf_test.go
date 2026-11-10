@@ -281,3 +281,27 @@ func TestEntryClearsItsMeta(t *testing.T) {
 		t.Errorf("entry ends at y=%.1f, but its meta column's last line sits at baseline %.1f", got, lastBaseline)
 	}
 }
+
+// TestSkillsStartPageThree holds the layout choice that the whole skills
+// section reads as one block on page three, never split across a page break.
+// The footer is drawn as each page closes, so the string drawn just before
+// the heading is the previous page's number.
+func TestSkillsStartPageThree(t *testing.T) {
+	for _, lang := range data.Langs {
+		t.Run(string(lang), func(t *testing.T) {
+			lines := strings.Split(text(t, Build(lang)), "\n")
+			heading := winAnsi(strings.ToUpper(secSkills.In(lang)))
+			want := winAnsi(pageWord.In(lang) + " 2")
+			for i, l := range lines {
+				if l != heading {
+					continue
+				}
+				if i == 0 || lines[i-1] != want {
+					t.Errorf("%q is not the first thing on page 3 (drawn after %q)", heading, lines[i-1])
+				}
+				return
+			}
+			t.Fatalf("no %q heading in the document", heading)
+		})
+	}
+}
