@@ -382,6 +382,7 @@ var Me = struct {
 				{Label: "secure-ui-web.fly.dev", URL: "https://secure-ui-web.fly.dev"},
 				{Label: "github.com/Barryprender/Secure-UI", URL: "https://github.com/Barryprender/Secure-UI"},
 				{Label: "npm: secure-ui-components", URL: "https://www.npmjs.com/package/secure-ui-components"},
+				{Label: "agensi.io: secure-web-components-craft", URL: "https://www.agensi.io/skills/secure-web-components-craft"},
 			},
 			Bullets: TS{
 				EN: []string{
@@ -390,6 +391,7 @@ var Me = struct {
 					"9 production-ready components published to npm: secure-form, secure-input, secure-select, secure-textarea, secure-file-upload, secure-datetime, secure-table, secure-card, secure-telemetry-provider",
 					"Framework-agnostic via the W3C Custom Elements standard: works in Angular, React, Vue, Svelte, Go/templ, Django, Rails, and plain HTML with a single script tag",
 					"Shipped the showcase site itself on the Go standard library, SQLite, templ, and native HTML/CSS/TypeScript, deployed to Fly.io with full i18n (EN/ES/FR/DE)",
+					"Packaged the library's conventions as an AI agent skill on Agensi (secure-web-components-craft): it builds and audits dependency-free Web Components against OWASP, flagging unsafe DOM insertion, missing AbortController cleanup and styling that breaks a strict CSP. Works in Claude Code, Cursor and Codex CLI",
 				},
 				ES: []string{
 					"Diseñé una biblioteca de Web Components en TypeScript sin dependencias en tiempo de ejecución que cubre el OWASP Top 10:2021 (A01–A10) con la seguridad activa por defecto: protección CSRF, saneamiento XSS, registro de auditoría y aislamiento con Shadow DOM cerrado, sin que nada de ello requiera configuración por parte del desarrollador",
@@ -397,6 +399,7 @@ var Me = struct {
 					"9 componentes listos para producción publicados en npm: secure-form, secure-input, secure-select, secure-textarea, secure-file-upload, secure-datetime, secure-table, secure-card, secure-telemetry-provider",
 					"Independiente de frameworks gracias al estándar W3C Custom Elements: funciona en Angular, React, Vue, Svelte, Go/templ, Django, Rails y HTML puro con una sola etiqueta script",
 					"Publiqué el propio sitio de demostración sobre la biblioteca estándar de Go, SQLite, templ y HTML, CSS y TypeScript nativos, desplegado en Fly.io con internacionalización completa (EN/ES/FR/DE)",
+					"Convertí las convenciones de la biblioteca en una skill para agentes de IA publicada en Agensi (secure-web-components-craft): construye y audita Web Components sin dependencias según OWASP, detectando inserciones inseguras en el DOM, limpiezas sin AbortController y estilos que rompen una CSP estricta. Funciona en Claude Code, Cursor y Codex CLI",
 				},
 			},
 			Stack: []string{"Go", "TypeScript", "Web Components", "SQLite", "Fly.io"},
@@ -526,8 +529,8 @@ var Me = struct {
 		{
 			Category: T{EN: "Practice", ES: "Práctica"},
 			Skills: TS{
-				EN: []string{"i18n / l10n", "Git", "Component library design", "Framework-agnostic architecture", "AI agent orchestration", "CI verification gates"},
-				ES: []string{"i18n / l10n", "Git", "Diseño de bibliotecas de componentes", "Arquitectura independiente de frameworks", "Orquestación de agentes de IA", "Controles de verificación en CI"},
+				EN: []string{"i18n / l10n", "Git", "Component library design", "Framework-agnostic architecture", "AI agent orchestration", "AI agent skill authoring", "CI verification gates"},
+				ES: []string{"i18n / l10n", "Git", "Diseño de bibliotecas de componentes", "Arquitectura independiente de frameworks", "Orquestación de agentes de IA", "Creación de skills para agentes de IA", "Controles de verificación en CI"},
 			},
 		},
 	},
