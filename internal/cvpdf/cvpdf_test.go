@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"barrypre.com/webcv/internal/data"
+	"barrypre.com/webcv/internal/pdf"
 )
 
 // text pulls every drawn string out of a document, in drawing order, so a test
@@ -253,5 +254,30 @@ func TestTrimScheme(t *testing.T) {
 		if got := trimScheme(in); got != want {
 			t.Errorf("trimScheme(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+// TestEntryClearsItsMeta guards the left column against overlap. A one-line
+// body beside dates that wrap to three lines must still advance past the
+// last date line, or the next entry's dates print on top of it.
+func TestEntryClearsItsMeta(t *testing.T) {
+	b := &builder{lang: data.EN, m: metricsFor(data.EN), doc: pdf.New(pdf.Options{
+		Margin: pdf.Margin{Top: marginY, Right: marginX, Bottom: marginY, Left: marginX},
+	})}
+	start := b.doc.Y()
+	meta := []string{"September 2014 — February 2015", "Madrid"}
+	lines := 0
+	for _, m := range meta {
+		lines += len(pdf.Wrap(m, pdf.Regular, metaSize, metaWidth))
+	}
+	if lines < 3 {
+		t.Fatalf("meta wraps to %d lines; the test needs one that wraps to 3+", lines)
+	}
+
+	b.entry(meta, func() { b.oneLine("Vivocom", "Front-End Developer") })
+
+	lastBaseline := start + metaSize + float64(lines-1)*(metaSize+2.5)
+	if got := b.doc.Y(); got < lastBaseline+metaSize {
+		t.Errorf("entry ends at y=%.1f, but its meta column's last line sits at baseline %.1f", got, lastBaseline)
 	}
 }

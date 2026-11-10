@@ -251,6 +251,11 @@ func (b *builder) entry(meta []string, body func()) {
 	}
 	d.SetY(start)
 	body()
+	// A one-line body beside dates that wrap would otherwise end above the
+	// last date line, and the next entry's dates would print over it.
+	if metaEnd := y - metaSize; d.Y() < metaEnd {
+		d.SetY(metaEnd)
+	}
 	d.Advance(8)
 }
 
