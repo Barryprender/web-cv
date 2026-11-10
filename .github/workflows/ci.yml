@@ -10,9 +10,10 @@
 #
 # The Go version is pinned exactly and appears in three places: here, the `go`
 # directive in go.mod, and the builder image in the Dockerfile. The floor is
-# 1.25.13 because govulncheck reports 22 reachable standard-library
-# vulnerabilities below it, in crypto/tls, crypto/x509, html/template,
-# net/http, net/url and net/mail — every package this server is built out of.
+# 1.26.11 because govulncheck reports 13 reachable standard-library
+# vulnerabilities in 1.25.13, in crypto/tls, crypto/x509, html/template,
+# mime/multipart and net/http, fixed only in 1.26.9 and 1.26.10: Go 1.25 is
+# out of support and gets no more security releases.
 # Raise all three together; a mismatch means CI is not testing what ships.
 
 name: CI
@@ -27,19 +28,21 @@ permissions:
   contents: read
 
 env:
-  GO_VERSION: "1.25.13"
+  GO_VERSION: "1.26.11"
 
 jobs:
   verify:
     name: verify.sh
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: false
+          # No go.sum (no dependencies), so there is nothing to key a cache on.
+          cache: false
 
       # Pinned, not @latest: with a floating version a gate's own verdict can
       # change without a commit to this repository.

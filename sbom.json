@@ -42,30 +42,30 @@
         },
         {
           "name": "cdx:gomod:build:env:GOVERSION",
-          "value": "go1.25.13"
+          "value": "go1.26.11"
         }
       ]
     }
   },
   "components": [
     {
-      "bom-ref": "pkg:golang/std@go1.25.13?type=module",
+      "bom-ref": "pkg:golang/std@go1.26.11?type=module",
       "type": "library",
       "name": "std",
-      "version": "go1.25.13",
+      "version": "go1.26.11",
       "scope": "required",
-      "purl": "pkg:golang/std@go1.25.13?type=module\u0026goos=linux\u0026goarch=amd64"
+      "purl": "pkg:golang/std@go1.26.11?type=module\u0026goos=linux\u0026goarch=amd64"
     }
   ],
   "dependencies": [
     {
       "ref": "pkg:golang/barrypre.com/webcv@v0.0.0-devel?type=module#cmd/server",
       "dependsOn": [
-        "pkg:golang/std@go1.25.13?type=module"
+        "pkg:golang/std@go1.26.11?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/std@go1.25.13?type=module"
+      "ref": "pkg:golang/std@go1.26.11?type=module"
     }
   ]
 }

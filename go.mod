@@ -1,3 +1,3 @@
 module barrypre.com/webcv
 
-go 1.25.13
+go 1.26.11

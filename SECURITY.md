@@ -93,9 +93,9 @@ Every one of these fails the build rather than warning. See
 | `docker build` | A Dockerfile whose static-binary and distroless assertions have stopped holding |
 
 The Go version is pinned in three places — `go.mod`, `Dockerfile`, and
-`GO_VERSION` in the workflow. Raise all three together. The floor is **1.25.13**
-because `govulncheck` reports 22 reachable standard-library vulnerabilities
-below it.
+`GO_VERSION` in the workflow. Raise all three together. The floor is **1.26.11**
+because `govulncheck` reports 13 reachable standard-library vulnerabilities
+in 1.25.13, fixed only on the 1.26 line; Go 1.25 is out of support.
 
 What these gates do not do: they are not a threat model, and they do not make
 untested code correct. They catch what they are pointed at.

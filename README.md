@@ -238,7 +238,7 @@ expands every collapsed timeline entry, and forces a light palette.
 `Dockerfile` and `fly.toml` are in the repository. `fly deploy` builds the image
 and ships it to the `barrypre-web` app in `ams`.
 
-The image is two stages: a pinned `golang:1.25.13-alpine` builder that produces
+The image is two stages: a pinned `golang:1.26.11-alpine` builder that produces
 a static binary, and `distroless/static-debian12:nonroot` to run it — no shell,
 no package manager, no libc, running as uid 65532.
 
@@ -267,9 +267,9 @@ verified with that provider.
   be reconstructed from source comments.
 
 The Go version is pinned in three places — `go.mod`, `Dockerfile` and
-`GO_VERSION` in the workflow. **Raise all three together.** The floor is 1.25.13
-because `govulncheck` reports 22 reachable standard-library vulnerabilities
-below it.
+`GO_VERSION` in the workflow. **Raise all three together.** The floor is 1.26.11
+because `govulncheck` reports 13 reachable standard-library vulnerabilities
+in 1.25.13, fixed only on the 1.26 line; Go 1.25 is out of support.
 
 Coverage is 95.0% of statements across `./internal/...`, measured the way CI
 measures it:

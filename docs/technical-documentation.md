@@ -49,7 +49,7 @@ replacing the in-process rate limiter with a shared store.
 
 ## Architecture and dependencies
 
-Go 1.25.13 standard library only. There are no third-party modules; `go.mod`
+Go 1.26.11 standard library only. There are no third-party modules; `go.mod`
 has no `require` block. `sbom.json` records this in CycloneDX 1.6 form,
 including the standard library as a component so a toolchain change shows up
 as an SBOM change.
@@ -80,7 +80,7 @@ The full reasoning, including the worst plausible defect, is in
 | Contact endpoint abuse flooding the inbox | Medium | Per-IP token bucket, `internal/site/ratelimit.go`, capped at 4096 tracked IPs so the limiter is not itself an exhaustion vector |
 | Silent loss of a real message | Medium | Fail-closed: no provider configured means submissions are refused, not accepted and dropped. A key without `CONTACT_FROM` refuses to start. Undelivered messages are logged in full |
 | Transport downgrade | Medium | `force_https` at the Fly proxy; HSTS sent under the explicit `FORCE_HSTS` opt-in, because Fly forwards plain HTTP and a forwarded header cannot be trusted to infer it |
-| Vulnerable standard library | Medium | Pinned Go floor of 1.25.13, enforced by `govulncheck` in CI |
+| Vulnerable standard library | Medium | Pinned Go floor of 1.26.11, enforced by `govulncheck` in CI |
 | Compromise of the running container | Low | distroless/static image, no shell, no package manager, no libc; static binary; runs as uid 65532 with no write access needed |
 
 No personal data belonging to third parties is stored. A contact form
@@ -127,3 +127,4 @@ and not something to let lapse quietly.
 | Date | Change |
 | --- | --- |
 | 2026-09-09 | First revision. Recorded alongside the CI, SBOM and `SECURITY.md` baseline, and the Go floor raised to 1.25.13. |
+| 2026-11-10 | Go floor raised to 1.26.11: 1.25 is out of support, and govulncheck reports 13 reachable standard-library vulnerabilities in 1.25.13 fixed only in 1.26.9 and 1.26.10. |
