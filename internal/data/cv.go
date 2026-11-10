@@ -125,8 +125,8 @@ var Me = struct {
 		ES: "Quince años de Angular a escala empresarial. Ahora dirijo agentes de IA para construir backends en Go seguros.",
 	},
 	Status: T{
-		EN: "building saui and secure-ui-components · shipped the archway orthotics portal",
-		ES: "desarrollando saui y secure-ui-components · portal de archway orthotics entregado",
+		EN: "building the fsg environmental data portal · saui and secure-ui-components · shipped the archway orthotics portal",
+		ES: "desarrollando el portal de datos ambientales de fsg · saui y secure-ui-components · portal de archway orthotics entregado",
 	},
 	Contact: Contact{
 		Email:    "barryprendergast78@gmail.com",
@@ -155,15 +155,15 @@ var Me = struct {
 			Location: T{EN: "Madrid", ES: "Madrid"},
 			Bullets: TS{
 				EN: []string{
-					"Set the constraints, directed AI agents through implementation, and own the result: Secure UI Components, SAUI and the Archway Orthotics portal (see Projects)",
+					"Set the constraints, directed AI agents through implementation, and own the result: the FSG Environmental Data Portal, the Archway Orthotics portal, Secure UI Components and SAUI (see Projects)",
 					"Completed the Advanced Cybersecurity & Cyber Intelligence diploma at CADEL, covering penetration testing methodology, SOC analysis, and the Kali Linux, Burp Suite, OWASP ZAP, SQLMap and Metasploit toolchain",
 				},
 				ES: []string{
-					"Fijé las restricciones, dirigí a los agentes en la implementación y asumo el resultado: Secure UI Components, SAUI y el portal de Archway Orthotics (ver Proyectos)",
+					"Fijé las restricciones, dirigí a los agentes en la implementación y asumo el resultado: el portal de datos ambientales de FSG, el portal de Archway Orthotics, Secure UI Components y SAUI (ver Proyectos)",
 					"Completé el diploma en Ciberseguridad Avanzada e Inteligencia Cibernética en CADEL, que abarca metodología de test de intrusión, análisis SOC y las herramientas Kali Linux, Burp Suite, OWASP ZAP, SQLMap y Metasploit",
 				},
 			},
-			Stack: []string{"Go", "TypeScript", "Web Components", "SQLite", "Fly.io"},
+			Stack: []string{"Go", "TypeScript", "Web Components", "PostgreSQL", "SQLite", "Fly.io"},
 		},
 		{
 			Company: T{EN: "Quality Compusoft", ES: "Quality Compusoft"},
@@ -344,6 +344,33 @@ var Me = struct {
 		},
 	},
 	Projects: []Project{
+		{
+			Name: "FSG Environmental Data Portal",
+			Role: T{EN: "Client engagement", ES: "Proyecto para cliente"},
+			From: Date{Year: 2026, Month: 9},
+			Links: []Link{
+				{Label: "fsgportal.org", URL: "https://fsgportal.org"},
+			},
+			Summary: T{
+				EN: "Multi-tenant carbon accounting portal for an Irish sustainability consultancy: clients log energy, water, waste and travel, and the portal reports Scope 1/2/3 emissions with a full audit trail.",
+				ES: "Portal multiinquilino de contabilidad de carbono para una consultora irlandesa de sostenibilidad: los clientes registran energía, agua, residuos y viajes, y el portal informa de las emisiones de alcance 1, 2 y 3 con una pista de auditoría completa.",
+			},
+			Bullets: TS{
+				EN: []string{
+					"Kept each client organisation's data apart in the SQL itself rather than in Go conditionals, so a forged id reads or writes nothing; database-backed tests prove it, and CI fails if they are skipped",
+					"Required a second factor for FSG staff (TOTP or a single-use recovery code) before any session exists, with lockout after repeated wrong codes and email alerts when it is set up, reset or bypassed with a recovery code",
+					"Strict CSP (default-src 'none', no inline script or style) with html/template escaping as the XSS defence; the Go toolchain is pinned as a security floor and govulncheck fails the build on a called vulnerability",
+					"Agent-built under my review behind the AI Harness verify.sh gates: the full test suite, gosec, govulncheck, gitleaks, an SBOM check and a distroless image that runs as non-root",
+				},
+				ES: []string{
+					"Aislé los datos de cada organización cliente en el propio SQL y no en condicionales de Go, de modo que un id falsificado no lee ni escribe nada; lo demuestran tests contra la base de datos, y la CI falla si se omiten",
+					"Exigí un segundo factor al personal de FSG (TOTP o un código de recuperación de un solo uso) antes de que exista ninguna sesión, con bloqueo tras códigos erróneos repetidos y avisos por correo cuando se configura, se restablece o se elude con un código de recuperación",
+					"CSP estricta (default-src 'none', sin scripts ni estilos en línea) con el escapado de html/template como defensa contra XSS; la versión de Go está fijada como suelo de seguridad y govulncheck rompe la compilación ante una vulnerabilidad alcanzable",
+					"Construido por agentes bajo mi revisión, tras los controles verify.sh de AI Harness: la batería completa de tests, gosec, govulncheck, gitleaks, una comprobación del SBOM y una imagen distroless que se ejecuta sin root",
+				},
+			},
+			Stack: []string{"Go", "PostgreSQL", "html/template", "argon2id", "Fly.io"},
+		},
 		{
 			Name: "Secure UI Components",
 			Role: T{EN: "Own project", ES: "Proyecto propio"},
